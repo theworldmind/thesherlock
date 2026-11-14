@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THESHERLOCK // Site Analiz & Arşiv V5.0</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      background: radial-gradient(1200px 600px at 20% -10%, rgba(16,185,129,.09), transparent), #090d16;
+      color: #e2e8f0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    .glass {
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(51, 65, 85, 0.65);
+    }
+    .code-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+    .code-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    .code-scroll::-webkit-scrollbar-track { background: #0f172a; }
+    .chip {
+      display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px;
+      font-family: ui-monospace, monospace; background: rgba(30,41,59,.95);
+      border: 1px solid rgba(71,85,105,.7); color: #e2e8f0; margin: 2px 4px 2px 0;
+    }
+    .scan-bar {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #10b981, transparent);
+      background-size: 200% 100%;
+      animation: slide 1.2s linear infinite;
+    }
+    @keyframes slide { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    mark { background: #facc15; color: #000; border-radius: 2px; }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+  <!-- Üst Bar -->
+  <header class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4 pb-6 border-b border-slate-800">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-mono font-bold">[ ]</div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-xl font-bold tracking-wider text-white">THESHERLOCK</h1>
+          <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">V5.0 ARCHIVE</span>
+        </div>
+        <p class="text-xs text-slate-400">Çok sayfalı site analizi, teknoloji yığını ve tam ön yüz arşivi</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2.5">
+      <button onclick="loadDemo()" class="text-xs px-3 py-2 rounded-lg glass hover:border-slate-500 transition">🧪 Demo Veri</button>
+      <button onclick="toggleSettingsModal()" id="apiSettingsBtn" class="text-xs px-3 py-2 rounded-lg glass hover:border-emerald-500/50 transition">⚙️ Ayarlar</button>
+      <div id="stateBadge" class="text-xs px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono">● Ready</div>
+    </div>
+  </header>
+
+  <!-- Arama & Tarama Kontrolü -->
+  <section class="max-w-4xl mx-auto my-8">
+    <div class="glass p-3 rounded-xl flex flex-col sm:flex-row gap-2.5 shadow-2xl">
+      <input id="targetUrl" type="text" inputmode="url" autocomplete="off" spellcheck="false"
+        placeholder="https://hedef-site.com"
+        value=""
+        class="flex-1 bg-slate-900/90 border border-slate-700/80 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 font-mono" />
+
+      <select id="scanMode" class="bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-3 text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-500">
+        <option value="deep">🌐 Derin Tarama (Tüm Site)</option>
+        <option value="single">⚡ Tek Sayfa (Hızlı)</option>
+      </select>
+
+      <button id="scanBtn" onclick="runSherlock()"
+        class="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-lg text-sm transition whitespace-nowrap shadow-lg shadow-emerald-900/30">
+        🔍 Tara & Arşivle
+      </button>
+    </div>
+
+    <div id="progressBar" class="scan-bar mt-3 rounded hidden"></div>
+    <p id="statusText" class="text-xs text-emerald-400/90 mt-2 font-mono hidden"></p>
+    <div id="errorBox" class="hidden mt-3 text-xs rounded-lg border border-rose-500/40 bg-rose-950/40 text-rose-200 p-3 font-mono whitespace-pre-wrap"></div>
+
+    <div id="historyWrap" class="mt-4 hidden">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-[11px] font-mono text-slate-500 uppercase">Son Taramalar</span>
+        <button onclick="clearHistory()" class="text-[11px] text-slate-500 hover:text-rose-400 font-mono">temizle</button>
+      </div>
+      <div id="historyList" class="flex flex-wrap gap-2"></div>
+    </div>
+  </section>
+
+  <!-- Sonuç Alanı -->
+  <main id="resultsArea" class="max-w-7xl mx-auto space-y-6 hidden">
+
+    <!-- Yönetici Özeti -->
+    <div class="glass rounded-xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div class="space-y-2 min-w-0">
+        <div class="flex flex-wrap items-center gap-2 text-xs font-mono text-emerald-400">
+          <span>SYSTEM & ARCHITECTURE REPORT</span>
+          <span id="reportTarget" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 break-all"></span>
+          <span id="httpStatusBadge" class="px-2 py-0.5 rounded border"></span>
+          <span id="generatedAt" class="text-slate-500"></span>
+        </div>
+        <h2 class="text-lg font-bold text-white">Yönetici & Sistem Mimarisi Özeti</h2>
+        <p id="execSummary" class="text-sm text-slate-300 leading-relaxed"></p>
+      </div>
+      <div class="glass px-6 py-3 rounded-xl border border-emerald-500/30 text-center shrink-0 min-w-[140px]">
+        <div class="text-[10px] font-mono uppercase text-slate-400">ANALİZ KAPSAMI</div>
+        <div id="confidenceScore" class="text-2xl font-bold text-emerald-400 font-mono">-</div>
+        <div class="h-1.5 bg-slate-800 rounded mt-2 overflow-hidden"><div id="confidenceBar" class="h-full bg-emerald-500 transition-all" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <!-- Taranan Alt Sayfalar -->
+    <div class="glass rounded-xl p-5 space-y-3">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+        <h3 class="text-sm font-semibold text-emerald-400">🕸️ Keşfedilen & Analiz Edilen Sayfalar</h3>
+        <span id="crawledCountBadge" class="text-[11px] font-mono text-slate-400">0 sayfa</span>
+      </div>
+      <div id="crawledPagesList" class="flex flex-wrap gap-2 text-xs font-mono"></div>
+    </div>
+
+    <!-- Şirket / Sistem Profili -->
+    <div class="glass rounded-xl p-5 space-y-3">
+      <h3 class="text-sm font-semibold text-emerald-400 border-b border-slate-800 pb-2">🏢 Sistem & Ürün Profili</h3>
+      <div id="companyProfile" class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs"></div>
+    </div>
+
+    <!-- 3 Sütun: Teknoloji, Güvenlik, Özellikler/Fiyat -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="glass rounded-xl p-5 space-y-3">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+          <h3 class="text-sm font-semibold text-sky-400">🛠️ Teknoloji & Mimari Yığını</h3>
+          <span class="text-[11px] font-mono text-slate-500">Stack</span>
+        </div>
+        <div id="techStackList" class="space-y-2 text-xs"></div>
+      </div>
+
+      <div class="glass rounded-xl p-5 space-y-3">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+          <h3 class="text-sm font-semibold text-amber-400">🛡️ Güvenlik & Yapı Gözlemleri</h3>
+          <span class="text-[11px] font-mono text-slate-500">SecOps</span>
+        </div>
+        <div id="securityList" class="space-y-2 text-xs"></div>
+      </div>
+
+      <div class="glass rounded-xl p-5 space-y-3">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+          <h3 class="text-sm font-semibold text-purple-400">📦 Modüller, Ürün & Fiyatlar</h3>
+          <span class="text-[11px] font-mono text-slate-500">Offerings</span>
+        </div>
+        <div id="offeringsList" class="space-y-2 text-xs text-slate-300"></div>
+      </div>
+    </div>
+
+    <!-- Mimari İçgörüler / Klonlama Notları -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="glass rounded-xl p-5 space-y-3">
+        <h3 class="text-sm font-semibold text-cyan-400 border-b border-slate-800 pb-2">💡 Sistem Mimarisi & Çalışma Mantığı</h3>
+        <ul id="insightsList" class="space-y-2 text-xs text-slate-300"></ul>
+      </div>
+      <div class="glass rounded-xl p-5 space-y-3">
+        <h3 class="text-sm font-semibold text-rose-400 border-b border-slate-800 pb-2">⚖️ Teknik Bağımlılıklar & Riskler</h3>
+        <ul id="risksList" class="space-y-2 text-xs text-slate-300"></ul>
+      </div>
+    </div>
+
+    <!-- Ayıklanan Kaynak Dosyaları -->
+    <div class="glass rounded-xl p-6 space-y-4">
+      <div class="flex flex-wrap justify-between items-center gap-3 border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-base font-bold text-white">📂 Ayıklanan Kaynak Dosyaları (Client-Side Assets)</h3>
+          <p class="text-xs text-slate-400">Sitenin tarayıcıya gönderdiği JS paketleri, CSS stilleri ve aday source map dosyaları.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <div id="assetCounts" class="flex gap-2 text-xs font-mono"></div>
+          <input id="assetFilter" oninput="debouncedAssetFilter()" placeholder="filtrele…" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs font-mono w-32 focus:outline-none focus:border-emerald-500" />
+          <button onclick="copyAllAssets()" class="text-xs px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 font-mono">📋 Tüm URL'ler</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+        <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-3">
+          <div class="flex justify-between mb-2"><span class="text-sky-400 font-semibold">📜 JavaScript</span><button onclick="copyList('js')" class="text-slate-500 hover:text-white">kopyala</button></div>
+          <ul id="jsAssetList" class="space-y-1.5 max-h-56 overflow-y-auto code-scroll text-slate-300"></ul>
+        </div>
+        <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-3">
+          <div class="flex justify-between mb-2"><span class="text-pink-400 font-semibold">🎨 CSS</span><button onclick="copyList('css')" class="text-slate-500 hover:text-white">kopyala</button></div>
+          <ul id="cssAssetList" class="space-y-1.5 max-h-56 overflow-y-auto code-scroll text-slate-300"></ul>
+        </div>
+        <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-3">
+          <div class="flex justify-between mb-2"><span class="text-emerald-400 font-semibold">🗺️ Source Map</span><button onclick="copyList('maps')" class="text-slate-500 hover:text-white">kopyala</button></div>
+          <ul id="mapAssetList" class="space-y-1.5 max-h-56 overflow-y-auto code-scroll text-slate-300"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tam Site Arşivi -->
+    <div class="glass rounded-xl p-6 space-y-4">
+      <div class="flex flex-wrap justify-between items-center gap-3 border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-base font-bold text-white">🗄️ Tam Site Arşivi</h3>
+          <p class="text-xs text-slate-400">Tüm sayfaların ham HTML'i, render edilmiş metinleri ve indirilen JS / CSS / font / görsel dosyaları tek ZIP içinde.</p>
+        </div>
+        <button id="zipBtn" onclick="downloadZip()" class="text-xs px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold font-mono">⬇️ Arşivi İndir (.zip)</button>
+      </div>
+      <div id="archiveStats" class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono"></div>
+      <div id="archiveFailures" class="text-xs font-mono"></div>
+    </div>
+
+    <!-- Ham HTML & Birleştirilmiş Sayfa İçeriği -->
+    <div class="glass rounded-xl p-5 space-y-3">
+      <div class="flex flex-wrap justify-between items-center gap-3">
+        <div class="flex items-center gap-3">
+          <div class="flex gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-500"></span><span class="w-3 h-3 rounded-full bg-amber-500"></span><span class="w-3 h-3 rounded-full bg-emerald-500"></span></div>
+          <div class="flex gap-1.5 text-xs font-mono">
+            <button id="tabHtmlBtn" onclick="switchCodeTab('html')" class="px-2.5 py-1 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">&lt;/&gt; Ham HTML</button>
+            <button id="tabMdBtn" onclick="switchCodeTab('md')" class="px-2.5 py-1 rounded bg-slate-800 border border-slate-700 text-slate-400 hover:text-white">📑 Tüm Sayfalar (Markdown)</button>
+          </div>
+          <span id="htmlSizeBadge" class="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-emerald-400">0 KB</span>
+        </div>
+        <div class="flex flex-wrap gap-2 items-center">
+          <input id="htmlSearch" oninput="debouncedSearchHtml()" placeholder="kod içinde ara…" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs font-mono w-36 focus:outline-none focus:border-emerald-500" />
+          <span id="searchCount" class="text-[11px] font-mono text-slate-500"></span>
+          <button onclick="copyActiveCode()" class="text-xs px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 font-mono">📋 Kopyala</button>
+          <button onclick="downloadHtml()" class="text-xs px-3 py-1.5 rounded bg-emerald-600/20 border border-emerald-500/40 hover:bg-emerald-600/30 text-emerald-300 font-mono">⬇️ .html</button>
+          <button onclick="downloadFullJson()" class="text-xs px-3 py-1.5 rounded bg-sky-600/20 border border-sky-500/40 hover:bg-sky-600/30 text-sky-300 font-mono">📦 Tam Rapor (.json)</button>
+        </div>
+      </div>
+      <pre id="rawHtmlBox" class="bg-slate-950 border border-slate-800 rounded-lg p-4 text-xs font-mono text-slate-300 overflow-x-auto max-h-[28rem] code-scroll whitespace-pre-wrap break-all"></pre>
+      <button id="showAllBtn" onclick="showAllHtml()" class="hidden text-xs px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 font-mono">Tümünü göster</button>
+    </div>
+  </main>
+
+  <!-- API Ayarları Modalı -->
+  <div id="settingsModal" class="fixed inset-0 bg-black/75 hidden items-center justify-center p-4 z-50">
+    <div class="glass max-w-lg w-full rounded-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto code-scroll">
+      <div class="flex justify-between items-center">
+        <h3 class="text-base font-bold text-white">⚙️ Yapay Zeka & Tarama Ayarları</h3>
+        <button onclick="toggleSettingsModal()" class="text-slate-400 hover:text-white text-sm">✕</button>
+      </div>
+
+      <div class="space-y-1.5">
+        <label class="text-xs font-mono text-emerald-400 block">Google Gemini API Key (isteğe bağlı — yalnızca yapay zekâ raporu için)</label>
+        <input id="geminiKeyInput" type="password" placeholder="AIzaSy..."
+          class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500" />
+        <p class="text-[11px] text-slate-400">Anahtar yalnızca tarayıcının yerel hafızasında (<code>localStorage</code>) saklanır. Ücretsiz anahtar için: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" class="text-emerald-400 underline">Google AI Studio</a></p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1">
+          <label class="text-xs font-mono text-slate-400 block">Gemini Modeli</label>
+          <input id="geminiModelInput" list="geminiModelList" autocomplete="off" spellcheck="false"
+            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500" />
+          <datalist id="geminiModelList">
+            <option value="gemini-flash-latest"></option>
+            <option value="gemini-3.8-flash"></option>
+            <option value="gemini-3.5-flash-lite"></option>
+          </datalist>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-mono text-slate-400 block">Maksimum Sayfa</label>
+          <select id="maxPagesInput" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-white">
+            <option value="4">4 Sayfa (Hızlı)</option>
+            <option value="8" selected>8 Sayfa (İdeal)</option>
+            <option value="15">15 Sayfa</option>
+            <option value="30">30 Sayfa (Yavaş)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="space-y-2 border-t border-slate-800 pt-3">
+        <div class="text-xs font-mono text-emerald-400">Arşiv</div>
+        <label class="flex items-center gap-2 text-xs text-slate-300"><input id="dlAssetsInput" type="checkbox" class="accent-emerald-500" /> JS / CSS / font içeriklerini indir</label>
+        <label class="flex items-center gap-2 text-xs text-slate-300"><input id="dlImagesInput" type="checkbox" class="accent-emerald-500" /> Görselleri de indir</label>
+        <div class="space-y-1">
+          <label class="text-xs font-mono text-slate-400 block">Maksimum Varlık Sayısı</label>
+          <select id="maxAssetsInput" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-white">
+            <option value="100">100</option>
+            <option value="300" selected>300</option>
+            <option value="800">800</option>
+          </select>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-mono text-slate-400 block">Özel CORS Proxy Öneki (isteğe bağlı)</label>
+          <input id="proxyInput" type="text" autocomplete="off" spellcheck="false" placeholder="https://proxy.ornek.workers.dev/?url="
+            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500" />
+          <p class="text-[11px] text-slate-400">Hedef URL bu önekin sonuna kodlanarak eklenir. Boş bırakılırsa önce doğrudan istek, sonra herkese açık proxy'ler denenir.</p>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="saveSettings()" class="text-xs px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="fixed bottom-5 right-5 glass px-4 py-2 rounded-lg text-xs font-mono hidden z-50"></div>
+
+  <script>
+    const HTML_PREVIEW_LIMIT = 200000;
+    const DEFAULT_MODEL = "gemini-flash-latest";
+    let currentRawHtml = "";
+    let currentMergedMarkdown = "";
+    let activeCodeTab = "html";
+    let lastFullResponse = null;
+    let assetState = { js: [], css: [], maps: [], mapsDeclared: [], mapsCandidates: [] };
+
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const safeHref = u => /^https?:\/\//i.test(u) ? esc(u) : "#";
+    const toArr = v => Array.isArray(v) ? v : (v == null || v === "" ? [] : [v]);
+    const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } };
+    const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+
+    function debounce(fn, ms) {
+      let t;
+      return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+    }
+
+    function toast(msg) {
+      const t = $('toast'); t.textContent = msg; t.classList.remove('hidden');
+      clearTimeout(t._h); t._h = setTimeout(() => t.classList.add('hidden'), 2400);
+    }
+
+    function setState(text, cls) {
+      const b = $('stateBadge'); b.textContent = text;
+      b.className = "text-xs px-3 py-2 rounded-lg font-mono border " + cls;
+    }
+
+    function showError(msg) { const e = $('errorBox'); e.textContent = msg; e.classList.remove('hidden'); }
+    function hideError() { $('errorBox').classList.add('hidden'); }
+
+    function normalizeUrl(raw) {
+      let u = raw.trim();
+      if (!u) return null;
+      if (!/^https?:\/\//i.test(u)) u = "https://" + u;
+      try { const p = new URL(u); return /^https?:$/.test(p.protocol) ? p.href : null; } catch { return null; }
+    }
+
+    /* ---------- Ayarlar ---------- */
+    function toggleSettingsModal() {
+      const m = $('settingsModal');
+      m.classList.toggle('hidden');
+      m.classList.toggle('flex');
+    }
+
+    function saveSettings() {
+      lsSet('sherlock_gemini_key', $('geminiKeyInput').value.trim());
+      lsSet('sherlock_gemini_model', $('geminiModelInput').value.trim() || DEFAULT_MODEL);
+      lsSet('sherlock_max_pages', $('maxPagesInput').value);
+      lsSet('sherlock_dl_assets', $('dlAssetsInput').checked ? '1' : '0');
+      lsSet('sherlock_dl_images', $('dlImagesInput').checked ? '1' : '0');
+      lsSet('sherlock_max_assets', $('maxAssetsInput').value);
+      const px = $('proxyInput').value.trim();
+      lsSet('sherlock_proxy', /^https:\/\//i.test(px) ? px : '');
+      updateApiButtonState();
+      toggleSettingsModal();
+      toast("Ayarlar kaydedildi");
+    }
+
+    function updateApiButtonState() {
+      const hasKey = !!lsGet('sherlock_gemini_key', '').trim();
+      const btn = $('apiSettingsBtn');
+      btn.textContent = hasKey ? "⚙️ Ayarlar · AI açık" : "⚙️ Ayarlar · AI kapalı";
+      btn.className = hasKey
+        ? "text-xs px-3 py-2 rounded-lg glass border-emerald-500/40 text-emerald-300 transition"
+        : "text-xs px-3 py-2 rounded-lg glass hover:border-emerald-500/50 text-slate-300 transition";
+    }
+
+    /* ---------- Ağ Katmanı ---------- */
+    const MAX_FILE_BYTES = 8 * 1024 * 1024;     // tek dosya üst sınırı
+    const MAX_TOTAL_BYTES = 80 * 1024 * 1024;   // arşiv toplam üst sınırı
+    const PUBLIC_PROXIES = [
+      u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+      u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+      u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
+    ];
+    const directOk = new Map(); // origin -> doğrudan fetch çalışıyor mu
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const decodeText = bytes => new TextDecoder('utf-8').decode(bytes);
+
+    // Sırayla dener: özel proxy -> doğrudan istek (CORS açıksa) -> herkese açık proxy'ler
+    async function fetchBytes(targetUrl, timeoutMs = 20000) {
+      let origin = "";
+      try { origin = new URL(targetUrl).origin; } catch { return null; }
+      const custom = lsGet('sherlock_proxy', '').trim();
+      const routes = [];
+      if (custom) routes.push({ name: 'custom', build: u => custom + encodeURIComponent(u) });
+      if (directOk.get(origin) !== false) routes.push({ name: 'direct', build: u => u });
+      PUBLIC_PROXIES.forEach((p, i) => routes.push({ name: 'proxy' + (i + 1), build: p }));
+
+      for (const route of routes) {
+        try {
+          const res = await fetch(route.build(targetUrl), { signal: AbortSignal.timeout(timeoutMs) });
+          if (route.name === 'direct') directOk.set(origin, true);
+          if (!res.ok) continue;
+          const bytes = new Uint8Array(await res.arrayBuffer());
+          if (!bytes.length) continue;
+          return { bytes, status: res.status, type: res.headers.get('content-type') || '', via: route.name };
+        } catch {
+          if (route.name === 'direct') directOk.set(origin, false);
+        }
+      }
+      return null;
+    }
+
+    async function fetchJinaMarkdown(targetUrl) {
+      try {
+        const res = await fetch(`https://r.jina.ai/${targetUrl}`, {
+          headers: { 'Accept': 'text/plain' },
+          signal: AbortSignal.timeout(25000)
+        });
+        if (!res.ok) return "";
+        return await res.text();
+      } catch {
+        return "";
+      }
+    }
+
+    // Eşzamanlılık sınırı ile sıralı sonuç döndüren havuz
+    async function pool(items, limit, fn) {
+      const out = new Array(items.length);
+      let next = 0;
+      const worker = async () => {
+        while (next < items.length) {
+          const i = next++;
+          try { out[i] = await fn(items[i], i); } catch { out[i] = null; }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+      return out;
+    }
+
+    /* ---------- Sitemap Keşfi ---------- */
+    async function fetchSitemapUrls(baseUrl) {
+      const origin = new URL(baseUrl).origin;
+      const found = new Set();
+      const sitemapFiles = new Set([origin + '/sitemap.xml']);
+
+      const robots = await fetchBytes(origin + '/robots.txt', 10000);
+      if (robots) {
+        decodeText(robots.bytes).split('\n').forEach(line => {
+          const m = line.match(/^\s*sitemap:\s*(\S+)/i);
+          if (m) sitemapFiles.add(m[1]);
+        });
+      }
+
+      const readSitemap = async (smUrl, depth) => {
+        const res = await fetchBytes(smUrl, 12000);
+        if (!res) return;
+        const xml = decodeText(res.bytes);
+        if (!/<(urlset|sitemapindex)/i.test(xml)) return;
+        const locs = Array.from(xml.matchAll(/<loc>\s*(?:<!\[CDATA\[)?\s*([^<\]\s]+)/gi)).map(m => m[1].replace(/&amp;/g, '&'));
+        if (/<sitemapindex/i.test(xml)) {
+          if (depth < 1) for (const child of locs.slice(0, 3)) await readSitemap(child, depth + 1);
+        } else {
+          for (const l of locs) { if (found.size >= 500) break; found.add(l); }
+        }
+      };
+
+      for (const sm of Array.from(sitemapFiles).slice(0, 3)) await readSitemap(sm, 0);
+      return Array.from(found);
+    }
+
+    /* ---------- Varlık Ayıklama ---------- */
+    const FONT_EXT = /\.(woff2?|ttf|otf|eot)(\?|#|$)/i;
+    const IMG_EXT = /\.(png|jpe?g|gif|svg|webp|avif|ico|bmp)(\?|#|$)/i;
+
+    function extractAssetsFromHtml(html, baseUrl) {
+      const js = new Set(), css = new Set(), images = new Set(), fonts = new Set();
+      const declaredMaps = new Set(), candidateMaps = new Set();
+      const empty = { js: [], css: [], images: [], fonts: [], source_maps: { declared: [], candidates: [] } };
+      if (!html) return empty;
+
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const docBase = doc.querySelector('base[href]')?.getAttribute('href');
+      let effectiveBase = baseUrl;
+      try { if (docBase) effectiveBase = new URL(docBase, baseUrl).href; } catch {}
+      const resolve = rel => {
+        try {
+          const u = new URL(String(rel).trim(), effectiveBase);
+          return /^https?:$/.test(u.protocol) ? u.href.split('#')[0] : null;
+        } catch { return null; }
+      };
+      const addMapCandidate = full => { if (!/\.map(\?|$)/.test(full)) candidateMaps.add(full.split('?')[0] + '.map'); };
+
+      doc.querySelectorAll('script[src]').forEach(s => {
+        const full = resolve(s.getAttribute('src'));
+        if (full) { js.add(full); addMapCandidate(full); }
+      });
+      doc.querySelectorAll('link[rel~="modulepreload"][href]').forEach(l => {
+        const full = resolve(l.getAttribute('href'));
+        if (full) js.add(full);
+      });
+      doc.querySelectorAll('link[rel~="stylesheet"][href], link[href$=".css"]').forEach(l => {
+        const full = resolve(l.getAttribute('href'));
+        if (full) { css.add(full); addMapCandidate(full); }
+      });
+      doc.querySelectorAll('link[rel~="preload"][as="font"][href]').forEach(l => {
+        const full = resolve(l.getAttribute('href'));
+        if (full) fonts.add(full);
+      });
+      doc.querySelectorAll('link[rel~="icon"][href], link[rel="apple-touch-icon"][href], link[rel~="preload"][as="image"][href]').forEach(l => {
+        const full = resolve(l.getAttribute('href'));
+        if (full) images.add(full);
+      });
+      doc.querySelectorAll('img[src], video[poster], source[src]').forEach(el => {
+        const full = resolve(el.getAttribute('src') || el.getAttribute('poster'));
+        if (full && (el.tagName !== 'SOURCE' || IMG_EXT.test(full))) images.add(full);
+      });
+      doc.querySelectorAll('img[srcset], source[srcset]').forEach(el => {
+        el.getAttribute('srcset').split(',').forEach(part => {
+          const full = resolve(part.trim().split(/\s+/)[0]);
+          if (full) images.add(full);
+        });
+      });
+      doc.querySelectorAll('meta[property="og:image"][content], meta[name="twitter:image"][content]').forEach(m => {
+        const full = resolve(m.getAttribute('content'));
+        if (full) images.add(full);
+      });
+
+      const mapRegex = /sourceMappingURL=([^\s"'*]+)/g;
+      let m;
+      while ((m = mapRegex.exec(html)) !== null) {
+        if (m[1].startsWith('data:')) continue;
+        const full = resolve(m[1]);
+        if (full) declaredMaps.add(full);
+      }
+
+      return {
+        js: Array.from(js), css: Array.from(css), images: Array.from(images), fonts: Array.from(fonts),
+        source_maps: { declared: Array.from(declaredMaps), candidates: Array.from(candidateMaps) }
+      };
+    }
+
+    function mergeAssets(list) {
+      const acc = { js: new Set(), css: new Set(), images: new Set(), fonts: new Set(), declared: new Set(), candidates: new Set() };
+      list.forEach(a => {
+        if (!a) return;
+        a.js.forEach(u => acc.js.add(u));
+        a.css.forEach(u => acc.css.add(u));
+        a.images.forEach(u => acc.images.add(u));
+        a.fonts.forEach(u => acc.fonts.add(u));
+        a.source_maps.declared.forEach(u => acc.declared.add(u));
+        a.source_maps.candidates.forEach(u => acc.candidates.add(u));
+      });
+      return {
+        js: Array.from(acc.js), css: Array.from(acc.css), images: Array.from(acc.images), fonts: Array.from(acc.fonts),
+        source_maps: { declared: Array.from(acc.declared), candidates: Array.from(acc.candidates).slice(0, 60) }
+      };
+    }
+
+    // CSS içindeki url(...) ve @import başvurularını çözer
+    function extractCssRefs(cssText, cssUrl) {
+      const refs = { css: [], fonts: [], images: [] };
+      const resolve = rel => {
+        try {
+          const u = new URL(rel, cssUrl);
+          return /^https?:$/.test(u.protocol) ? u.href.split('#')[0] : null;
+        } catch { return null; }
+      };
+      let m;
+      const importRe = /@import\s+(?:url\(\s*)?["']?([^"')\s;]+)/gi;
+      while ((m = importRe.exec(cssText)) !== null) {
+        const full = resolve(m[1]);
+        if (full) refs.css.push(full);
+      }
+      const urlRe = /url\(\s*["']?([^"')]+)["']?\s*\)/gi;
+      while ((m = urlRe.exec(cssText)) !== null) {
+        const raw = m[1].trim();
+        if (!raw || raw.startsWith('data:')) continue;
+        const full = resolve(raw);
+        if (!full || refs.css.includes(full)) continue;
+        if (FONT_EXT.test(full)) refs.fonts.push(full);
+        else if (IMG_EXT.test(full)) refs.images.push(full);
+      }
+      return refs;
+    }
+
+    /* ---------- Arşiv (ZIP) Altyapısı ---------- */
+    let archiveFiles = new Map();   // arşiv yolu -> Uint8Array
+    let archiveManifest = [];       // { url, path, kind, bytes, ok, note }
+
+    function resetArchive() { archiveFiles = new Map(); archiveManifest = []; }
+
+    function shortHash(s) {
+      let h = 5381;
+      for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+      return h.toString(36);
+    }
+
+    function safeSeg(s) {
+      let d = s;
+      try { d = decodeURIComponent(s); } catch {}
+      return d.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80) || '_';
+    }
+
+    // URL'yi arşiv içindeki benzersiz bir dosya yoluna çevirir
+    function urlToArchivePath(u, root) {
+      const p = new URL(u);
+      const segs = p.pathname.split('/').filter(Boolean).map(safeSeg).filter(s => !/^\.+$/.test(s));
+      if (root === 'pages') {
+        segs.push('index.html');
+      } else {
+        if (!segs.length || p.pathname.endsWith('/')) segs.push('index');
+        if (p.search) {
+          const last = segs.pop();
+          const dot = last.lastIndexOf('.');
+          const tag = '_q' + shortHash(p.search);
+          segs.push(dot > 0 ? last.slice(0, dot) + tag + last.slice(dot) : last + tag);
+        }
+      }
+      let path = [root, safeSeg(p.host), ...segs].join('/');
+      let n = 1;
+      const base = path;
+      while (archiveFiles.has(path)) path = base + '.' + (++n);
+      return path;
+    }
+
+    function archiveTotalBytes() {
+      let t = 0;
+      archiveFiles.forEach(b => { t += b.length; });
+      return t;
+    }
+
+    const CRC_TABLE = (() => {
+      const t = new Uint32Array(256);
+      for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        t[n] = c >>> 0;
+      }
+      return t;
+    })();
+
+    function crc32(buf) {
+      let c = 0xFFFFFFFF;
+      for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+      return (c ^ 0xFFFFFFFF) >>> 0;
+    }
+
+    // Bağımlılıksız, sıkıştırmasız (store) ZIP üretici. files: [{ name, data: Uint8Array }]
+    function buildZipParts(files) {
+      const enc = new TextEncoder();
+      const parts = [], central = [];
+      let offset = 0;
+      const d = new Date();
+      const dosTime = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+      const dosDate = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+
+      for (const f of files) {
+        const name = enc.encode(f.name);
+        const crc = crc32(f.data);
+        const size = f.data.length;
+
+        const lh = new DataView(new ArrayBuffer(30));
+        lh.setUint32(0, 0x04034b50, true);
+        lh.setUint16(4, 20, true);
+        lh.setUint16(6, 0x0800, true);      // UTF-8 dosya adı
+        lh.setUint16(8, 0, true);           // store
+        lh.setUint16(10, dosTime, true);
+        lh.setUint16(12, dosDate, true);
+        lh.setUint32(14, crc, true);
+        lh.setUint32(18, size, true);
+        lh.setUint32(22, size, true);
+        lh.setUint16(26, name.length, true);
+        lh.setUint16(28, 0, true);
+        parts.push(new Uint8Array(lh.buffer), name, f.data);
+
+        const ch = new DataView(new ArrayBuffer(46));
+        ch.setUint32(0, 0x02014b50, true);
+        ch.setUint16(4, 20, true);
+        ch.setUint16(6, 20, true);
+        ch.setUint16(8, 0x0800, true);
+        ch.setUint16(10, 0, true);
+        ch.setUint16(12, dosTime, true);
+        ch.setUint16(14, dosDate, true);
+        ch.setUint32(16, crc, true);
+        ch.setUint32(20, size, true);
+        ch.setUint32(24, size, true);
+        ch.setUint16(28, name.length, true);
+        ch.setUint32(42, offset, true);
+        central.push(new Uint8Array(ch.buffer), name);
+
+        offset += 30 + name.length + size;
+      }
+
+      const cdSize = central.reduce((s, p) => s + p.length, 0);
+      const end = new DataView(new ArrayBuffer(22));
+      end.setUint32(0, 0x06054b50, true);
+      end.setUint16(8, files.length, true);
+      end.setUint16(10, files.length, true);
+      end.setUint32(12, cdSize, true);
+      end.setUint32(16, offset, true);
+      return [...parts, ...central, new Uint8Array(end.buffer)];
+    }
+
+    // Varlık içeriklerini indirir; CSS içinden çıkan font/görsel/@import başvurularını kuyruğa ekler
+    async function downloadAssets(assets, opts, onProgress) {
+      const queue = [];
+      const seen = new Set();
+      const push = (url, kind) => {
+        if (seen.has(url)) return;
+        if (kind === 'image' && !opts.images) return;
+        if (seen.size >= opts.maxAssets) return;
+        seen.add(url);
+        queue.push({ url, kind });
+      };
+
+      assets.css.forEach(u => push(u, 'css'));
+      assets.js.forEach(u => push(u, 'js'));
+      assets.fonts.forEach(u => push(u, 'font'));
+      assets.source_maps.declared.forEach(u => push(u, 'map'));
+      assets.images.forEach(u => push(u, 'image'));
+
+      const extraDeclared = new Set(assets.source_maps.declared);
+      const extraFonts = new Set(assets.fonts);
+      const extraImages = new Set(assets.images);
+      const extraCss = new Set(assets.css);
+      let cursor = 0, active = 0, done = 0, total = archiveTotalBytes();
+
+      const handle = async item => {
+        if (total >= MAX_TOTAL_BYTES) {
+          archiveManifest.push({ url: item.url, kind: item.kind, ok: false, note: 'arşiv boyut sınırı aşıldı' });
+          return;
+        }
+        const res = await fetchBytes(item.url, 25000);
+        if (!res) {
+          archiveManifest.push({ url: item.url, kind: item.kind, ok: false, note: 'indirilemedi' });
+          return;
+        }
+        if (res.bytes.length > MAX_FILE_BYTES) {
+          archiveManifest.push({ url: item.url, kind: item.kind, ok: false, bytes: res.bytes.length, note: 'dosya çok büyük' });
+          return;
+        }
+        const path = urlToArchivePath(item.url, 'assets');
+        archiveFiles.set(path, res.bytes);
+        total += res.bytes.length;
+        archiveManifest.push({ url: item.url, path, kind: item.kind, bytes: res.bytes.length, ok: true, via: res.via });
+
+        if (item.kind === 'css' || item.kind === 'js') {
+          const text = decodeText(res.bytes);
+          const tail = text.slice(-400).match(/sourceMappingURL=([^\s*]+)/);
+          if (tail && !tail[1].startsWith('data:')) {
+            try {
+              const mapUrl = new URL(tail[1], item.url).href;
+              extraDeclared.add(mapUrl);
+              push(mapUrl, 'map');
+            } catch {}
+          }
+          if (item.kind === 'css') {
+            const refs = extractCssRefs(text, item.url);
+            refs.css.forEach(u => { extraCss.add(u); push(u, 'css'); });
+            refs.fonts.forEach(u => { extraFonts.add(u); push(u, 'font'); });
+            refs.images.forEach(u => { extraImages.add(u); push(u, 'image'); });
+          }
+        }
+      };
+
+      const worker = async () => {
+        while (true) {
+          if (cursor >= queue.length) {
+            if (active === 0) return;
+            await sleep(120);
+            continue;
+          }
+          const item = queue[cursor++];
+          active++;
+          try { await handle(item); }
+          catch { archiveManifest.push({ url: item.url, kind: item.kind, ok: false, note: 'hata' }); }
+          finally { active--; done++; onProgress && onProgress(done, queue.length); }
+        }
+      };
+      await Promise.all(Array.from({ length: 6 }, worker));
+
+      assets.css = Array.from(extraCss);
+      assets.fonts = Array.from(extraFonts);
+      assets.images = Array.from(extraImages);
+      assets.source_maps.declared = Array.from(extraDeclared);
+      return assets;
+    }
+
+    /* ---------- Sayfa Keşfi ---------- */
+    function discoverSubpages(html, markdown, sitemapUrls, baseUrl, maxPages) {
+      const origin = new URL(baseUrl).origin;
+      const cleanBase = baseUrl.replace(/\/$/, '');
+      const selected = new Set([cleanBase]);
+      const candidates = new Set();
+
+      const priorityWords = [
+        'about', 'hakkimizda', 'kurumsal', 'biz-kimiz',
+        'pricing', 'fiyat', 'paket', 'plans',
+        'product', 'urun', 'service', 'hizmet', 'solution', 'cozum',
+        'feature', 'ozellik', 'docs', 'api', 'architecture',
+        'contact', 'iletisim', 'team', 'ekip', 'security', 'guvenlik'
+      ];
+
+      const addCandidate = rawHref => {
+        try {
+          const u = new URL(rawHref, baseUrl);
+          if (u.origin !== origin) return;
+          if (/\.(pdf|jpg|jpeg|png|gif|svg|webp|avif|ico|css|js|xml|json|zip|mp4|webm|mp3|woff2?|ttf)$/i.test(u.pathname)) return;
+          const normalized = u.origin + u.pathname.replace(/\/$/, '');
+          if (normalized !== origin && normalized !== cleanBase) candidates.add(normalized);
+        } catch {}
+      };
+
+      if (html) {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        doc.querySelectorAll('a[href]').forEach(a => addCandidate(a.getAttribute('href')));
+      }
+
+      if (markdown) {
+        const mdLinkRegex = /\[[^\]]*\]\((https?:\/\/[^)\s]+|\/[^)\s]+)\)/g;
+        let m;
+        while ((m = mdLinkRegex.exec(markdown)) !== null) addCandidate(m[1]);
+      }
+
+      toArr(sitemapUrls).forEach(addCandidate);
+
+      const depth = u => u.split('/').length;
+      const sorted = Array.from(candidates).sort((a, b) => {
+        const scoreA = priorityWords.some(w => a.toLowerCase().includes(w)) ? 2 : 0;
+        const scoreB = priorityWords.some(w => b.toLowerCase().includes(w)) ? 2 : 0;
+        return (scoreB - scoreA) || (depth(a) - depth(b)) || (a.length - b.length);
+      });
+
+      for (const link of sorted) {
+        if (selected.size >= maxPages) break;
+        selected.add(link);
+      }
+
+      return { pages: Array.from(selected), totalFound: candidates.size + 1 };
+    }
+
+    /* ---------- Yerel Teknoloji Parmak İzi (API anahtarı gerektirmez) ---------- */
+    function detectTechLocal(html, assets) {
+      const hay = (html || "") + "\n" + [...assets.js, ...assets.css].join("\n");
+      const rules = [
+        ["Next.js", /\/_next\/|__NEXT_DATA__/], ["Nuxt", /\/_nuxt\/|__NUXT__/], ["React", /react(-dom)?[.@-]|data-reactroot/i],
+        ["Vue", /vue(\.runtime)?(\.global)?(\.prod)?(\.min)?\.js|data-v-[0-9a-f]{6,}/i], ["Angular", /ng-version=/],
+        ["Svelte / SvelteKit", /\/_app\/immutable\/|svelte-[a-z0-9]{5,}/], ["Astro", /astro-island|\/_astro\//],
+        ["Gatsby", /___gatsby|\/page-data\//], ["Remix", /__remixContext/], ["Vite", /\/assets\/index-[\w-]{6,}\.(js|css)/],
+        ["WordPress", /wp-content|wp-includes/], ["Shopify", /cdn\.shopify\.com/], ["Webflow", /webflow\.(js|css)|assets\.website-files\.com|cdn\.prod\.website-files\.com/],
+        ["Wix", /static\.wixstatic\.com|parastorage\.com/], ["Squarespace", /squarespace\.com|static1\.squarespace/],
+        ["Framer", /framerusercontent\.com/], ["Tailwind CSS", /tailwind|--tw-[a-z-]+/i], ["Bootstrap", /bootstrap(\.bundle)?(\.min)?\.(js|css)/i],
+        ["jQuery", /jquery[.-]?[\d.]*(\.min)?\.js/i], ["Google Tag Manager", /googletagmanager\.com/], ["Google Analytics", /google-analytics\.com|gtag\(/],
+        ["Meta Pixel", /connect\.facebook\.net/], ["Hotjar", /static\.hotjar\.com/], ["PostHog", /posthog/i], ["Plausible", /plausible\.io/],
+        ["Sentry", /sentry(-cdn)?\.(io|com)|browser\.sentry/i], ["Stripe.js", /js\.stripe\.com/], ["Intercom", /widget\.intercom\.io/],
+        ["Cloudflare", /cdnjs\.cloudflare\.com|\/cdn-cgi\//], ["Vercel", /vercel(-insights|-analytics)?|\/_vercel\//i], ["Netlify", /netlify/i]
+      ];
+      const found = rules.filter(([, re]) => re.test(hay)).map(([name]) => name);
+      const gen = (html || "").match(/<meta[^>]+name=["']generator["'][^>]+content=["']([^"']+)/i);
+      if (gen) found.push("Generator: " + gen[1]);
+      return found;
+    }
+
+    function buildLocalReport(targetUrl, pages, assets, techHints, note) {
+      let host = targetUrl;
+      try { host = new URL(targetUrl).hostname; } catch {}
+      return {
+        executive_summary: `${note} ${pages.length} sayfa tarandı; ${assets.js.length} JS, ${assets.css.length} CSS, ${assets.images.length} görsel ve ${assets.fonts.length} font başvurusu bulundu. Aşağıdaki teknoloji listesi yapay zekâ olmadan, kaynak koddaki izlerden çıkarıldı.`,
+        confidence_score: 0.5,
+        company_profile: { name: host, value_proposition: "", target_audience: "" },
+        tech_stack: {
+          frameworks: techHints.length ? techHints : ["Belirgin iz bulunamadı"],
+          cms: [], cdn_hosting: [], server: "", analytics_marketing: [],
+          security_observations: []
+        },
+        offerings: [],
+        key_insights: [],
+        risks_and_opportunities: []
+      };
+    }
+
+    /* ---------- Gemini Analizi ---------- */
+    async function analyzeWithGemini(apiKey, model, targetUrl, crawledPages, mergedContent, assets, htmlSnippet, techHints) {
+      const prompt = `Sen uzman bir Yazılım Mimarı ve Web analistisin.
+Aşağıda "${targetUrl}" web sitesinin ana sayfası ve keşfedilen alt sayfalarından toplanan içerikler ile teknik varlıklar (JS/CSS) yer alıyor.
+Bu verileri derinlemesine incele ve sitenin sistem mimarisini, nasıl inşa edildiğini, modüllerini ve iş modelini eksiksiz çıkar.
+
+Taranan Sayfalar: ${crawledPages.join(', ')}
+Kaynak koddan otomatik tespit edilen teknoloji izleri: ${techHints.join(', ') || 'yok'}
+Tespit Edilen JS Dosyaları (${assets.js.length} adet): ${assets.js.slice(0, 40).join(', ')}
+Tespit Edilen CSS Dosyaları (${assets.css.length} adet): ${assets.css.slice(0, 20).join(', ')}
+
+Ham HTML Başlangıç Kesiti:
+${htmlSnippet.slice(0, 20000)}
+
+Birleştirilmiş Sayfa İçerikleri:
+${mergedContent.slice(0, 180000)}
+
+Yanıtını YALNIZCA aşağıdaki geçerli JSON formatında (Türkçe olarak) ver, markdown kod bloğu kullanma:
+{
+  "executive_summary": "Sitenin ne yaptığı, teknik mimarisi ve temel çalışma mantığının kapsamlı özeti",
+  "confidence_score": 0.90,
+  "company_profile": {
+    "name": "Şirket veya Proje Adı",
+    "value_proposition": "Temel değer önerisi ve çözdüğü problem",
+    "target_audience": "Hedef kullanıcı kitlesi"
+  },
+  "tech_stack": {
+    "frameworks": ["Örn: Next.js, React, Tailwind CSS"],
+    "cms": ["Varsa CMS veya yok"],
+    "cdn_hosting": ["Cloudflare, Vercel, AWS vb."],
+    "server": "Sunucu / Altyapı tahmini",
+    "analytics_marketing": ["Analytics ve 3. parti SDK'lar"],
+    "security_observations": ["Client-side güvenlik, CORS, CSP veya mimari gözlemler"]
+  },
+  "offerings": [
+    { "name": "Modül / Plan Adı", "description": "Ne işe yaradığı", "price": "Varsa fiyatı" }
+  ],
+  "key_insights": [
+    "Sistemin frontend-backend mimarisi ve veri akışı nasıl çalışıyor?",
+    "Siteyi yeniden kurmak veya taşımak için gereken temel bileşenler neler?"
+  ],
+  "risks_and_opportunities": [
+    "Teknik bağımlılıklar, darboğazlar veya geliştirme fırsatları"
+  ]
+}`;
+
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.2, responseMimeType: "application/json" }
+        })
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Gemini API Hatası (${res.status}): ${errText.slice(0, 250)}`);
+      }
+
+      const data = await res.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+      const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+      return JSON.parse(cleaned);
+    }
+
+    /* ---------- Ana Çalıştırıcı ---------- */
+    async function runSherlock() {
+      hideError();
+      const url = normalizeUrl($('targetUrl').value);
+      const apiKey = lsGet('sherlock_gemini_key', '').trim();
+      const model = lsGet('sherlock_gemini_model', DEFAULT_MODEL).trim() || DEFAULT_MODEL;
+      const mode = $('scanMode').value;
+      const maxPages = mode === 'deep' ? Number(lsGet('sherlock_max_pages', '8')) : 1;
+      const wantAssets = lsGet('sherlock_dl_assets', '1') === '1';
+      const wantImages = lsGet('sherlock_dl_images', '1') === '1';
+      const maxAssets = Number(lsGet('sherlock_max_assets', '300'));
+
+      if (!url) { showError("Geçerli bir URL girin (örn. https://ornek.com)."); return; }
+
+      $('targetUrl').value = url;
+      const btn = $('scanBtn');
+      const statusText = $('statusText');
+      btn.disabled = true;
+      $('progressBar').classList.remove('hidden');
+      statusText.classList.remove('hidden');
+      setState("● Scanning", "bg-amber-500/10 border-amber-500/30 text-amber-300");
+      resetArchive();
+
+      const t0 = Date.now();
+      const enc = new TextEncoder();
+
+      try {
+        // 1. Ana sayfa + sitemap
+        statusText.textContent = `[1/5] Ana sayfa, robots.txt ve sitemap okunuyor: ${url}`;
+        const [mainRes, mainMd, sitemapUrls] = await Promise.all([
+          fetchBytes(url),
+          fetchJinaMarkdown(url),
+          mode === 'deep' ? fetchSitemapUrls(url).catch(() => []) : Promise.resolve([])
+        ]);
+        const rawHtml = mainRes ? decodeText(mainRes.bytes) : "";
+
+        if (!rawHtml && !mainMd) {
+          throw new Error("Hedef siteye erişilemedi. Site bot koruması (Cloudflare vb.) uyguluyor olabilir ya da proxy'ler yanıt vermiyor. ⚙️ Ayarlar'dan kendi proxy adresini tanımlamayı dene.");
+        }
+
+        // 2. Sayfa keşfi
+        const discovery = mode === 'deep'
+          ? discoverSubpages(rawHtml, mainMd, sitemapUrls, url, maxPages)
+          : { pages: [url.replace(/\/$/, '')], totalFound: 1 };
+        const pagesToCrawl = discovery.pages;
+
+        // 3. Tüm sayfaların ham HTML'i + render edilmiş metni
+        let pagesDone = 0;
+        statusText.textContent = `[2/5] ${discovery.totalFound} sayfa bulundu, ${pagesToCrawl.length} tanesi çekiliyor...`;
+        const pages = (await pool(pagesToCrawl, 4, async (pageUrl, idx) => {
+          const [h, md] = await Promise.all([
+            idx === 0 ? mainRes : fetchBytes(pageUrl),
+            idx === 0 && mainMd ? mainMd : fetchJinaMarkdown(pageUrl)
+          ]);
+          pagesDone++;
+          statusText.textContent = `[2/5] Sayfalar çekiliyor: ${pagesDone}/${pagesToCrawl.length}`;
+          return { url: pageUrl, html: h ? decodeText(h.bytes) : "", bytes: h ? h.bytes : null, status: h ? h.status : 0, md: md || "" };
+        })).filter(Boolean);
+
+        const pageSummaries = pages.map(p => {
+          const entry = { url: p.url, http_status: p.status, html_bytes: p.bytes ? p.bytes.length : 0, markdown_chars: p.md.length };
+          if (p.bytes) {
+            entry.html_path = urlToArchivePath(p.url, 'pages');
+            archiveFiles.set(entry.html_path, p.bytes);
+            archiveManifest.push({ url: p.url, path: entry.html_path, kind: 'page', bytes: p.bytes.length, ok: true });
+          } else {
+            archiveManifest.push({ url: p.url, kind: 'page', ok: false, note: 'ham HTML alınamadı' });
+          }
+          if (p.md.trim().length > 40) {
+            entry.markdown_path = urlToArchivePath(p.url, 'markdown').replace(/\/index$/, '') + '.md';
+            archiveFiles.set(entry.markdown_path, enc.encode(p.md));
+          }
+          return entry;
+        });
+
+        const validPages = pages.filter(p => p.md.trim().length > 40);
+        const mergedMarkdown = validPages.length
+          ? validPages.map(p => `========================================\nSAYFA: ${p.url}\n========================================\n${p.md}`).join('\n\n')
+          : (rawHtml ? "Markdown render alınamadı, ham HTML üzerinden analiz yapılıyor." : "");
+
+        // 4. Varlıklar: tüm sayfalardan ayıkla, içeriklerini indir
+        let assets = mergeAssets(pages.map(p => extractAssetsFromHtml(p.html, p.url)));
+        if (wantAssets) {
+          statusText.textContent = `[3/5] Varlık içerikleri indiriliyor...`;
+          assets = await downloadAssets(assets, { images: wantImages, maxAssets }, (done, total) => {
+            statusText.textContent = `[3/5] Varlıklar indiriliyor: ${done}/${total} (${(archiveTotalBytes() / 1048576).toFixed(1)} MB)`;
+          });
+        }
+
+        // 5. Analiz
+        const techHints = detectTechLocal(pages.map(p => p.html).join("\n"), assets);
+        let report;
+        if (apiKey) {
+          statusText.textContent = `[4/5] ${pages.length} sayfa ve ${assets.js.length} JS dosyası ${model} ile analiz ediliyor...`;
+          try {
+            report = await analyzeWithGemini(apiKey, model, url, pagesToCrawl, mergedMarkdown, assets, rawHtml, techHints);
+          } catch (aiErr) {
+            report = buildLocalReport(url, pages, assets, techHints, "Yapay zekâ analizi başarısız oldu, arşiv yine de hazır.");
+            showError("⚠️ " + (aiErr.message || "Gemini analizi başarısız.") + "\nArşiv ve varlık listesi etkilenmedi.");
+          }
+        } else {
+          report = buildLocalReport(url, pages, assets, techHints, "Gemini API anahtarı girilmediği için yapay zekâ raporu üretilmedi.");
+        }
+
+        statusText.textContent = `[5/5] Rapor hazırlanıyor...`;
+        const okFiles = archiveManifest.filter(x => x.ok).length;
+        const fullPayload = {
+          tool: "THESHERLOCK V5.0",
+          target_url: url,
+          generated_at: new Date().toISOString(),
+          http_status: mainRes ? mainRes.status : 0,
+          crawled_pages: pagesToCrawl,
+          pages_found_total: discovery.totalFound,
+          pages: pageSummaries,
+          report,
+          detected_tech: techHints,
+          raw_html: rawHtml,
+          merged_markdown: mergedMarkdown,
+          extracted_assets: assets,
+          archive: {
+            files: archiveFiles.size,
+            bytes: archiveTotalBytes(),
+            downloaded: okFiles,
+            failed: archiveManifest.length - okFiles,
+            manifest: archiveManifest
+          }
+        };
+
+        lastFullResponse = fullPayload;
+        renderResults(fullPayload, url);
+        addHistory(url);
+
+        const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+        statusText.textContent = `✅ Tarama tamamlandı — ${pages.length} sayfa, ${archiveFiles.size} dosya, ${(archiveTotalBytes() / 1048576).toFixed(1)} MB, ${elapsed} sn`;
+        setState("● Done", "bg-emerald-500/10 border-emerald-500/30 text-emerald-400");
+        $('resultsArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      } catch (err) {
+        showError("❌ " + (err.message || "Bilinmeyen bir hata oluştu."));
+        statusText.textContent = "";
+        setState("● Error", "bg-rose-500/10 border-rose-500/30 text-rose-300");
+      } finally {
+        btn.disabled = false;
+        $('progressBar').classList.add('hidden');
+      }
+    }
+
+    /* ---------- Arşiv Kartı & ZIP İndirme ---------- */
+    function fmtBytes(n) {
+      if (!n) return "0 KB";
+      return n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : (n / 1024).toFixed(1) + " KB";
+    }
+
+    function renderArchive(data) {
+      const a = data.archive;
+      const stats = $('archiveStats'), fails = $('archiveFailures'), btn = $('zipBtn');
+      if (!a || !archiveFiles.size) {
+        stats.innerHTML = `<span class="text-slate-500">Bu sonuç için indirilmiş arşiv yok (demo veri ya da varlık indirme kapalı).</span>`;
+        fails.innerHTML = "";
+        btn.disabled = true;
+        return;
+      }
+      btn.disabled = false;
+      const count = kind => a.manifest.filter(x => x.ok && x.kind === kind).length;
+      const tile = (label, value, cls) => `<div class="bg-slate-900/70 px-3 py-2 rounded border border-slate-800/80"><div class="text-[10px] uppercase text-slate-500">${esc(label)}</div><div class="${cls} font-bold">${esc(value)}</div></div>`;
+      stats.innerHTML =
+        tile("Sayfa HTML", count('page'), "text-emerald-400") +
+        tile("JS", count('js'), "text-sky-400") +
+        tile("CSS", count('css'), "text-pink-400") +
+        tile("Görsel", count('image'), "text-amber-300") +
+        tile("Font", count('font'), "text-purple-300") +
+        tile("Source Map", count('map'), "text-emerald-300") +
+        tile("Toplam Boyut", fmtBytes(a.bytes), "text-white") +
+        tile("İndirilemeyen", a.failed, a.failed ? "text-rose-300" : "text-slate-300");
+
+      const failed = a.manifest.filter(x => !x.ok);
+      fails.innerHTML = failed.length
+        ? `<details><summary class="cursor-pointer text-rose-300">İndirilemeyen ${failed.length} öğe</summary><ul class="mt-2 space-y-1 max-h-40 overflow-y-auto code-scroll">` +
+          failed.map(x => `<li class="truncate text-slate-400" title="${esc(x.url)}">[${esc(x.kind)}] ${esc(x.url)} — ${esc(x.note || '')}</li>`).join('') + `</ul></details>`
+        : "";
+    }
+
+    function downloadZip() {
+      if (!lastFullResponse || !archiveFiles.size) return toast("İndirilecek arşiv yok");
+      const enc = new TextEncoder();
+      const files = [];
+      archiveFiles.forEach((data, name) => files.push({ name, data }));
+      files.push({ name: 'manifest.json', data: enc.encode(JSON.stringify(lastFullResponse.archive.manifest, null, 2)) });
+      files.push({ name: 'report.json', data: enc.encode(JSON.stringify({ ...lastFullResponse, raw_html: undefined, merged_markdown: undefined }, null, 2)) });
+      if (lastFullResponse.merged_markdown) files.push({ name: 'all-pages.md', data: enc.encode(lastFullResponse.merged_markdown) });
+      files.push({ name: 'README.txt', data: enc.encode(
+        `THESHERLOCK arşivi\nHedef: ${lastFullResponse.target_url}\nTarih: ${lastFullResponse.generated_at}\n\n` +
+        `pages/      her sayfanın sunucudan gelen ham HTML'i\nmarkdown/   her sayfanın render edilmiş metni\nassets/     JS, CSS, font, görsel ve source map dosyaları (alan adına göre)\n` +
+        `manifest.json  özgün URL -> arşiv yolu eşlemesi ve indirilemeyenler\nreport.json    analiz raporu ve varlık listesi\n\n` +
+        `Dosyalar özgün halleriyle saklanır; HTML içindeki bağlantılar yeniden yazılmaz.\n`) });
+      const blob = new Blob(buildZipParts(files), { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `thesherlock_${hostSlug()}.zip`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      toast(`${files.length} dosyalık arşiv indiriliyor`);
+    }
+
+    /* ---------- Render Fonksiyonları ---------- */
+    function kv(label, value) {
+      return `<div class="bg-slate-900/70 p-3 rounded border border-slate-800/80">
+        <div class="text-[10px] font-mono uppercase text-slate-500 mb-1">${esc(label)}</div>
+        <div class="text-slate-200 leading-relaxed">${esc(value || "Tespit edilemedi")}</div></div>`;
+    }
+
+    function chips(arr) {
+      return toArr(arr).map(x => `<span class="chip">${esc(typeof x === 'object' ? JSON.stringify(x) : x)}</span>`).join('') || `<span class="text-slate-500">—</span>`;
+    }
+
+    function bulletList(arr, color) {
+      const a = toArr(arr);
+      return a.length
+        ? a.map(x => `<li class="bg-slate-900/70 p-2.5 rounded border border-slate-800/80 ${color || ''}">• ${esc(typeof x === 'object' ? JSON.stringify(x) : x)}</li>`).join('')
+        : `<li class="text-slate-500">Veri yok</li>`;
+    }
+
+    function renderResults(data, fallbackUrl) {
+      $('resultsArea').classList.remove('hidden');
+      const report = data.report || {};
+      const target = data.target_url || fallbackUrl;
+      const status = data.http_status ?? 200;
+
+      $('reportTarget').textContent = target;
+      const sb = $('httpStatusBadge');
+      sb.textContent = `HTTP ${status}`;
+      const ok = Number(status) >= 200 && Number(status) < 400;
+      sb.className = "px-2 py-0.5 rounded border " + (ok ? "bg-emerald-950 text-emerald-300 border-emerald-700/40" : "bg-rose-950 text-rose-300 border-rose-700/40");
+      $('generatedAt').textContent = data.generated_at ? new Date(data.generated_at).toLocaleString() : "";
+
+      $('execSummary').textContent = report.executive_summary || "Analiz tamamlandı.";
+
+      let score = Number(report.confidence_score ?? 0.85);
+      if (isNaN(score)) score = 0.85;
+      const pct = Math.round(score <= 1 ? score * 100 : score);
+      $('confidenceScore').textContent = `%${pct}`;
+      $('confidenceBar').style.width = Math.min(100, pct) + "%";
+
+      // Taranan Alt Sayfalar
+      const pages = toArr(data.crawled_pages);
+      $('crawledCountBadge').textContent = `${pages.length} sayfa incelendi`;
+      $('crawledPagesList').innerHTML = pages.map((p, i) => `
+        <a href="${safeHref(p)}" target="_blank" rel="noopener noreferrer"
+          class="px-2.5 py-1 rounded bg-slate-900 border ${i === 0 ? 'border-emerald-500/50 text-emerald-300' : 'border-slate-700 text-slate-300'} hover:border-emerald-400 transition">
+          ${i === 0 ? '🏠 ' : '📄 '}${esc(p)}
+        </a>`).join('');
+
+      // Profil
+      const cp = report.company_profile || {};
+      $('companyProfile').innerHTML = kv("Proje / Şirket", cp.name) + kv("Değer Önerisi", cp.value_proposition) + kv("Hedef Kitle", cp.target_audience);
+
+      // Teknoloji
+      const ts = report.tech_stack || {};
+      const rows = [
+        ["Frameworks & Frontend", ts.frameworks],
+        ["CMS / İçerik Yönetimi", ts.cms],
+        ["CDN & Hosting", ts.cdn_hosting],
+        ["Server & Altyapı", ts.server],
+        ["Analytics & SDK", ts.analytics_marketing]
+      ];
+      $('techStackList').innerHTML = rows.map(([k, v]) => `<div class="bg-slate-900/70 p-2.5 rounded border border-slate-800/80">
+        <div class="text-slate-500 font-mono text-[10px] uppercase mb-1">${esc(k)}</div>${chips(v)}</div>`).join('');
+
+      // Güvenlik
+      $('securityList').innerHTML = bulletList(ts.security_observations, 'text-amber-300');
+
+      // Modüller & Fiyat
+      const offers = toArr(report.offerings);
+      $('offeringsList').innerHTML = offers.length ? offers.map(o => {
+        if (typeof o !== 'object') return `<div class="bg-slate-900/70 p-2.5 rounded border border-slate-800/80">${esc(o)}</div>`;
+        return `<div class="bg-slate-900/70 p-2.5 rounded border border-slate-800/80">
+          <div class="flex justify-between gap-2"><span class="font-semibold text-white">${esc(o.name)}</span>
+          ${o.price ? `<span class="font-mono text-emerald-400 whitespace-nowrap">${esc(o.price)}</span>` : ''}</div>
+          <div class="text-slate-400 mt-1">${esc(o.description)}</div></div>`;
+      }).join('') : `<div class="text-slate-500">Modül / fiyat bilgisi tespit edilmedi</div>`;
+
+      $('insightsList').innerHTML = bulletList(report.key_insights);
+      $('risksList').innerHTML = bulletList(report.risks_and_opportunities);
+
+      // Varlıklar
+      const assets = data.extracted_assets || {};
+      const sm = assets.source_maps || {};
+      assetState = {
+        js: toArr(assets.js),
+        css: toArr(assets.css),
+        mapsDeclared: toArr(sm.declared),
+        mapsCandidates: toArr(sm.candidates),
+        maps: [...toArr(sm.declared), ...toArr(sm.candidates)]
+      };
+      $('assetCounts').innerHTML = `
+        <span class="px-2 py-1 rounded bg-sky-500/10 text-sky-400 border border-sky-500/30">JS ${assetState.js.length}</span>
+        <span class="px-2 py-1 rounded bg-pink-500/10 text-pink-400 border border-pink-500/30">CSS ${assetState.css.length}</span>
+        <span class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">MAP ${assetState.mapsDeclared.length} + ${assetState.mapsCandidates.length} aday</span>
+        <span class="px-2 py-1 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30">IMG ${toArr(assets.images).length}</span>
+        <span class="px-2 py-1 rounded bg-purple-500/10 text-purple-300 border border-purple-500/30">FONT ${toArr(assets.fonts).length}</span>`;
+      $('assetFilter').value = "";
+      applyAssetFilter();
+
+      renderArchive(data);
+
+      // Kod & Markdown Kutusu
+      currentRawHtml = data.raw_html || "";
+      currentMergedMarkdown = data.merged_markdown || "";
+      switchCodeTab('html');
+    }
+
+    function applyAssetFilter() {
+      const q = $('assetFilter').value.trim().toLowerCase();
+      const f = arr => q ? arr.filter(u => u.toLowerCase().includes(q)) : arr;
+      const link = (u, tag) => `<li class="truncate" title="${esc(u)}"><a href="${safeHref(u)}" target="_blank" rel="noopener noreferrer" class="hover:text-emerald-400 underline decoration-slate-700">${esc(u)}</a>${tag || ''}</li>`;
+      const lst = (arr, empty, tagFn) => arr.length ? arr.map(u => link(u, tagFn && tagFn(u))).join('') : `<li class="text-slate-500">${empty}</li>`;
+      $('jsAssetList').innerHTML = lst(f(assetState.js), "JS bulunamadı");
+      $('cssAssetList').innerHTML = lst(f(assetState.css), "CSS bulunamadı");
+      const decl = new Set(assetState.mapsDeclared);
+      $('mapAssetList').innerHTML = lst(f(assetState.maps), "Source map izi yok",
+        u => decl.has(u) ? ` <span class="text-emerald-500">[declared]</span>` : ` <span class="text-slate-500">[aday]</span>`);
+    }
+    const debouncedAssetFilter = debounce(applyAssetFilter, 200);
+
+    function copyList(kind) {
+      const arr = assetState[kind] || [];
+      if (!arr.length) return toast("Liste boş");
+      copyText(arr.join("\n"), `${arr.length} URL kopyalandı`);
+    }
+
+    function copyAllAssets() {
+      const ex = lastFullResponse?.extracted_assets || {};
+      const all = [...assetState.js, ...assetState.css, ...assetState.maps, ...toArr(ex.images), ...toArr(ex.fonts)];
+      if (!all.length) return toast("Liste boş");
+      copyText(all.join("\n"), `${all.length} URL kopyalandı`);
+    }
+
+    /* ---------- Kod / Markdown Sekmesi & Güvenli Arama ---------- */
+    let htmlExpanded = false;
+
+    function switchCodeTab(tab) {
+      activeCodeTab = tab;
+      const activeCls = "px-2.5 py-1 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300";
+      const inactiveCls = "px-2.5 py-1 rounded bg-slate-800 border border-slate-700 text-slate-400 hover:text-white";
+      $('tabHtmlBtn').className = tab === 'html' ? activeCls : inactiveCls;
+      $('tabMdBtn').className = tab === 'md' ? activeCls : inactiveCls;
+
+      const source = tab === 'html' ? currentRawHtml : currentMergedMarkdown;
+      const kb = (source.length / 1024).toFixed(1);
+      $('htmlSizeBadge').textContent = `${kb} KB (${source.length.toLocaleString()} karakter)`;
+      $('htmlSearch').value = "";
+      $('searchCount').textContent = "";
+      renderCodeBox(false, "");
+    }
+
+    function renderCodeBox(expanded, query) {
+      htmlExpanded = expanded;
+      const box = $('rawHtmlBox');
+      const source = activeCodeTab === 'html' ? currentRawHtml : currentMergedMarkdown;
+
+      if (!source) {
+        box.textContent = activeCodeTab === 'html' ? "Ham HTML alınamadı." : "Birleştirilmiş sayfa içeriği yok.";
+        $('showAllBtn').classList.add('hidden');
+        return;
+      }
+
+      const big = source.length > HTML_PREVIEW_LIMIT;
+      const text = (big && !expanded) ? source.slice(0, HTML_PREVIEW_LIMIT) : source;
+
+      if (query) {
+        // XSS-güvenli parçalama ve <mark> vurgulama
+        const lowerText = text.toLowerCase();
+        const lowerQuery = query.toLowerCase();
+        let result = "";
+        let lastIdx = 0;
+        let idx = lowerText.indexOf(lowerQuery);
+        while (idx !== -1) {
+          result += esc(text.slice(lastIdx, idx)) + `<mark>${esc(text.slice(idx, idx + query.length))}</mark>`;
+          lastIdx = idx + query.length;
+          idx = lowerText.indexOf(lowerQuery, lastIdx);
+        }
+        result += esc(text.slice(lastIdx));
+        box.innerHTML = result;
+      } else {
+        box.textContent = text;
+      }
+
+      $('showAllBtn').classList.toggle('hidden', !(big && !expanded));
+      if (big && !expanded) $('showAllBtn').textContent = `Tümünü göster (${(source.length / 1024).toFixed(0)} KB)`;
+    }
+
+    function showAllHtml() { renderCodeBox(true, $('htmlSearch').value.trim()); }
+
+    function searchHtml() {
+      const q = $('htmlSearch').value.trim();
+      const source = activeCodeTab === 'html' ? currentRawHtml : currentMergedMarkdown;
+      if (!source) return;
+      if (!q) { $('searchCount').textContent = ""; renderCodeBox(htmlExpanded, ""); return; }
+      const count = source.toLowerCase().split(q.toLowerCase()).length - 1;
+      $('searchCount').textContent = `${count} eşleşme`;
+      renderCodeBox(true, q);
+    }
+    const debouncedSearchHtml = debounce(searchHtml, 250);
+
+    /* ---------- Kopyala / İndir ---------- */
+    function copyText(text, msg) {
+      const done = () => toast(msg || "Kopyalandı");
+      if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+      else fallbackCopy(text, done);
+    }
+
+    function fallbackCopy(text, cb) {
+      const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); cb(); } catch { toast("Kopyalama başarısız"); }
+      ta.remove();
+    }
+
+    function copyActiveCode() {
+      const source = activeCodeTab === 'html' ? currentRawHtml : currentMergedMarkdown;
+      if (!source) return toast("Kopyalanacak içerik yok");
+      copyText(source, activeCodeTab === 'html' ? "Ham HTML kopyalandı" : "Tüm sayfaların metni kopyalandı");
+    }
+
+    function saveBlob(content, type, name) {
+      const url = URL.createObjectURL(new Blob([content], { type }));
+      const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function hostSlug() {
+      try { return new URL(lastFullResponse?.target_url || $('targetUrl').value).hostname.replace(/[^a-z0-9.-]/gi, '_'); }
+      catch { return 'target'; }
+    }
+
+    function downloadHtml() {
+      if (!currentRawHtml) return toast("İndirilecek HTML yok");
+      saveBlob(currentRawHtml, 'text/html', `thesherlock_${hostSlug()}.html`);
+    }
+
+    function downloadFullJson() {
+      if (!lastFullResponse) return toast("Rapor yok");
+      saveBlob(JSON.stringify(lastFullResponse, null, 2), 'application/json', `thesherlock_${hostSlug()}.json`);
+    }
+
+    /* ---------- Geçmiş (Event Delegation) ---------- */
+    function getHistory() { try { return JSON.parse(lsGet('sherlock_history', '[]')); } catch { return []; } }
+    function addHistory(url) {
+      const h = [url, ...getHistory().filter(x => x !== url)].slice(0, 8);
+      lsSet('sherlock_history', JSON.stringify(h));
+      renderHistory();
+    }
+    function clearHistory() { lsSet('sherlock_history', '[]'); renderHistory(); }
+    function renderHistory() {
+      const h = getHistory();
+      $('historyWrap').classList.toggle('hidden', !h.length);
+      $('historyList').innerHTML = h.map(u => `<button data-url="${esc(u)}" class="text-[11px] font-mono px-2 py-1 rounded bg-slate-800/80 hover:bg-slate-700 border border-slate-700 truncate max-w-[16rem]">${esc(u)}</button>`).join('');
+    }
+    $('historyList').addEventListener('click', e => {
+      const btn = e.target.closest('button[data-url]');
+      if (btn) $('targetUrl').value = btn.dataset.url;
+    });
+
+    /* ---------- Demo ---------- */
+    function loadDemo() {
+      const demo = {
+        target_url: "https://example.com/",
+        generated_at: new Date().toISOString(),
+        http_status: 200,
+        crawled_pages: [
+          "https://example.com",
+          "https://example.com/about",
+          "https://example.com/pricing",
+          "https://example.com/docs"
+        ],
+        report: {
+          executive_summary: "Demo veri: Next.js ve Tailwind CSS ile inşa edilmiş modüler SaaS platformu. Ana sayfa, Hakkımızda, Fiyatlandırma ve Dokümantasyon sayfaları birlikte analiz edildi.",
+          confidence_score: 0.92,
+          company_profile: {
+            name: "Example AI Platform",
+            value_proposition: "Ekipler için otonom iş akışı ve veri analizi altyapısı",
+            target_audience: "Yazılım ekipleri, girişimler ve kurumsal şirketler"
+          },
+          tech_stack: {
+            frameworks: ["Next.js 14", "React 18", "Tailwind CSS"],
+            cms: ["Headless MDX"],
+            cdn_hosting: ["Cloudflare", "Vercel Edge"],
+            server: "Vercel Serverless",
+            analytics_marketing: ["PostHog", "Plausible"],
+            security_observations: ["HSTS aktif", "Client-side bundle'da API anahtarı sızıntısı yok", "CSP başlığı sıkılaştırılabilir"]
+          },
+          offerings: [
+            { name: "Starter", description: "Bireysel geliştiriciler için temel erişim", price: "$0/ay" },
+            { name: "Pro", description: "Sınırsız proje ve API erişimi", price: "$29/ay" },
+            { name: "Enterprise", description: "Özel bulut kurulumu ve SLA", price: "Özel Teklif" }
+          ],
+          key_insights: [
+            "Frontend tamamen statik üretim (SSG) ve kenar önbellekleme (Edge Caching) üzerine kurulu.",
+            "Benzer bir sistem kurmak için Next.js App Router + Tailwind + Serverless API rotaları yeterli."
+          ],
+          risks_and_opportunities: [
+            "Üçüncü parti analitik scriptleri ilk yükleme süresini artırabilir."
+          ]
+        },
+        raw_html: "<!DOCTYPE html>\n<html>\n<head><title>Example AI</title>\n<link rel=\"stylesheet\" href=\"/_next/static/css/app.css\">\n</head>\n<body>\n<div id=\"__next\"></div>\n<script src=\"/_next/static/chunks/main.js\"><\/script>\n</body>\n</html>",
+        merged_markdown: "========================================\nSAYFA: https://example.com\n========================================\n# Example AI Platform\nOtonom iş akışı motoru.\n\n========================================\nSAYFA: https://example.com/pricing\n========================================\n# Fiyatlandırma\nStarter $0 | Pro $29",
+        extracted_assets: {
+          js: ["https://example.com/_next/static/chunks/main.js", "https://example.com/_next/static/chunks/webpack.js"],
+          css: ["https://example.com/_next/static/css/app.css"],
+          source_maps: {
+            declared: [],
+            candidates: ["https://example.com/_next/static/chunks/main.js.map"]
+          }
+        }
+      };
+      resetArchive();
+      lastFullResponse = demo;
+      hideError();
+      renderResults(demo, demo.target_url);
+      $('statusText').classList.remove('hidden');
+      $('statusText').textContent = "🧪 Demo veri gösteriliyor";
+    }
+
+    /* ---------- Başlangıç ---------- */
+    $('geminiKeyInput').value = lsGet('sherlock_gemini_key', '');
+    // Eski sürümden kalan, artık sunulmayan model adlarını varsayılana çevir
+    if (/^gemini-(1|2)\./.test(lsGet('sherlock_gemini_model', ''))) lsSet('sherlock_gemini_model', DEFAULT_MODEL);
+    $('geminiModelInput').value = lsGet('sherlock_gemini_model', DEFAULT_MODEL);
+    $('maxPagesInput').value = lsGet('sherlock_max_pages', '8');
+    if (!$('maxPagesInput').value) $('maxPagesInput').value = '8';
+    $('dlAssetsInput').checked = lsGet('sherlock_dl_assets', '1') === '1';
+    $('dlImagesInput').checked = lsGet('sherlock_dl_images', '1') === '1';
+    $('maxAssetsInput').value = lsGet('sherlock_max_assets', '300');
+    $('proxyInput').value = lsGet('sherlock_proxy', '');
+    updateApiButtonState();
+    $('targetUrl').addEventListener('keydown', e => { if (e.key === 'Enter') runSherlock(); });
+    $('settingsModal').addEventListener('click', e => { if (e.target.id === 'settingsModal') toggleSettingsModal(); });
+    renderHistory();
+  </script>
+</body>
+</html>
