@@ -1,4 +1,4 @@
-# THESHERLOCK 7.0
+# THESHERLOCK 7.1
 
 Kendi sitelerini incelemek ve yedeklemek için iki parçalı araç:
 
@@ -8,7 +8,8 @@ Kendi sitelerini incelemek ve yedeklemek için iki parçalı araç:
 ## Tarayıcı sürümü
 
 - **Sayfa keşfi:** İç linkler, `robots.txt` ve `sitemap.xml` üzerinden aynı alan adındaki sayfaları bulur; her turda yeni sayfalardan link toplayarak (çok seviyeli) 60 sayfaya kadar tarar. `fbclid`, `utm_*` gibi izleme parametrelerini temizler.
-- **Engelli sitelerde yedek yol:** Sitenin kendi HTML'ine ulaşılamazsa sayfayı Jina Reader'ın render ettiği HTML'den alır; sitemap'i de aynı yoldan okur. İstekler sıraya alınır, sınır aşılırsa beklenip yeniden denenir.
+- **Kod öncelikli ve hızlı:** Görseller varsayılan olarak kapalı; önce JS, CSS ve source map dosyaları indirilir. Çalışmayan proxy ve erişilemeyen alan adları birkaç denemeden sonra atlanır. Geçen süre ve tahmini kalan süre canlı gösterilir.
+- **Engelli sitelerde yedek yol:** Sitenin kendi HTML'ine ulaşılamazsa sayfayı Jina Reader'ın render ettiği HTML'den alır; sitemap'i ve inmeyen JS/CSS dosyalarını da aynı yoldan metin olarak okur (boşluk ve satır sonları özgünden farklı olabilir). İstekler sıraya alınır, sınır aşılırsa beklenip yeniden denenir.
 - **Ham HTML + render edilmiş metin:** Her sayfanın sunucudan gelen HTML'ini ve `r.jina.ai` üzerinden render edilmiş Markdown metnini alır.
 - **Varlık arşivi:** JS, CSS, font, görsel ve source map dosyalarının içeriklerini indirir. CSS içindeki `@import` / `url(...)` başvurularını ve JS içinde geçen ek parçaları (lazy chunk) da izler.
 - **Çevrimdışı gezilebilir kopya:** Bağlantıları yerel dosyalara çevrilmiş ikinci bir kopya üretir; `offline/index.html` dosyasından açılır. Özgün dosyalar ayrıca dokunulmadan saklanır.
