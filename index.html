@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>THESHERLOCK // Site Analiz & Arşiv V6.6</title>
+  <title>THESHERLOCK // Site Analiz & Arşiv V7.0</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root { color-scheme: dark; }
@@ -44,7 +44,7 @@
       <div>
         <div class="flex items-center gap-2">
           <h1 class="text-xl font-bold tracking-wider text-white">THESHERLOCK</h1>
-          <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">V6.6</span>
+          <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">V7.0</span>
         </div>
         <p class="text-xs text-slate-400">Çok sayfalı site analizi, kanıta dayalı rapor ve çevrimdışı gezilebilir arşiv</p>
       </div>
@@ -79,6 +79,11 @@
     <p id="statusText" class="text-xs text-emerald-400/90 mt-2 font-mono hidden"></p>
     <div id="errorBox" class="hidden mt-3 text-xs rounded-lg border border-rose-500/40 bg-rose-950/40 text-rose-200 p-3 font-mono whitespace-pre-wrap"></div>
 
+    <p class="mt-3 text-[11px] text-slate-500 font-mono leading-relaxed">
+      Tarayıcı, sitenin izin vermediği dosyaları indiremez. Her sayfa ve her dosya dahil eksiksiz yedek için
+      <a href="https://github.com/theworldmind/thesherlock/tree/main/cli" target="_blank" rel="noopener noreferrer" class="text-emerald-400 underline">THESHERLOCK CLI</a>'yi bilgisayarında çalıştır.
+    </p>
+
     <div id="historyWrap" class="mt-4 hidden">
       <div class="flex items-center justify-between mb-1">
         <span class="text-[11px] font-mono text-slate-500 uppercase">Son Taramalar</span>
@@ -90,6 +95,9 @@
 
   <!-- Sonuç Alanı -->
   <main id="resultsArea" class="max-w-7xl mx-auto space-y-6 hidden">
+
+    <!-- Özet Şeridi -->
+    <div id="statsStrip" class="grid grid-cols-3 md:grid-cols-6 gap-3"></div>
 
     <!-- Yönetici Özeti -->
     <div class="glass rounded-xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -239,6 +247,7 @@
           <button onclick="downloadHtml()" class="text-xs px-3 py-1.5 rounded bg-emerald-600/20 border border-emerald-500/40 hover:bg-emerald-600/30 text-emerald-300 font-mono">⬇️ .html</button>
           <button onclick="downloadFullJson()" class="text-xs px-3 py-1.5 rounded bg-sky-600/20 border border-sky-500/40 hover:bg-sky-600/30 text-sky-300 font-mono">📦 Tam Rapor (.json)</button>
           <button onclick="downloadReportHtml()" class="text-xs px-3 py-1.5 rounded bg-purple-600/20 border border-purple-500/40 hover:bg-purple-600/30 text-purple-300 font-mono">📄 Okunabilir Rapor (.html)</button>
+          <button onclick="downloadBlueprint()" class="text-xs px-3 py-1.5 rounded bg-amber-600/20 border border-amber-500/40 hover:bg-amber-600/30 text-amber-300 font-mono">🧭 Site Planı (.md)</button>
         </div>
       </div>
       <pre id="rawHtmlBox" class="bg-slate-950 border border-slate-800 rounded-lg p-4 text-xs font-mono text-slate-300 overflow-x-auto max-h-[28rem] code-scroll whitespace-pre-wrap break-all"></pre>
@@ -278,7 +287,8 @@
             <option value="4">4 Sayfa (Hızlı)</option>
             <option value="8" selected>8 Sayfa (İdeal)</option>
             <option value="15">15 Sayfa</option>
-            <option value="30">30 Sayfa (Yavaş)</option>
+            <option value="30">30 Sayfa</option>
+            <option value="60">60 Sayfa (Yavaş)</option>
           </select>
         </div>
       </div>
@@ -295,6 +305,12 @@
             <option value="300" selected>300</option>
             <option value="800">800</option>
           </select>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-mono text-slate-400 block">Jina Reader API Key (isteğe bağlı)</label>
+          <input id="jinaKeyInput" type="password" autocomplete="off" placeholder="jina_..."
+            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500" />
+          <p class="text-[11px] text-slate-400">Anahtarsız da çalışır; anahtar daha yüksek istek sınırı sağlar. <a href="https://jina.ai/reader" target="_blank" rel="noopener noreferrer" class="text-emerald-400 underline">jina.ai</a></p>
         </div>
         <div class="space-y-1">
           <label class="text-xs font-mono text-slate-400 block">Özel CORS Proxy Öneki (isteğe bağlı)</label>
@@ -368,6 +384,7 @@
       lsSet('sherlock_dl_images', $('dlImagesInput').checked ? '1' : '0');
       lsSet('sherlock_follow_chunks', $('followChunksInput').checked ? '1' : '0');
       lsSet('sherlock_max_assets', $('maxAssetsInput').value);
+      lsSet('sherlock_jina_key', $('jinaKeyInput').value.trim());
       const px = $('proxyInput').value.trim();
       lsSet('sherlock_proxy', /^https:\/\//i.test(px) ? px : '');
       updateApiButtonState();
@@ -421,17 +438,68 @@
       return null;
     }
 
-    async function fetchJinaMarkdown(targetUrl) {
+    function jinaHeaders(format) {
+      const h = { 'Accept': 'text/plain', 'X-Return-Format': format };
+      const k = lsGet('sherlock_jina_key', '').trim();
+      if (k) h['Authorization'] = 'Bearer ' + k;
+      return h;
+    }
+
+    // Jina'ya aynı anda en fazla 2 (anahtarla 5) istek; 429 gelirse bekleyip yeniden dener
+    let jinaActive = 0;
+    const jinaWaiters = [];
+    async function jinaFetch(targetUrl, format, timeoutMs) {
+      const limit = lsGet('sherlock_jina_key', '').trim() ? 5 : 2;
+      while (jinaActive >= limit) await new Promise(r => jinaWaiters.push(r));
+      jinaActive++;
       try {
-        const res = await fetch(`https://r.jina.ai/${targetUrl}`, {
-          headers: { 'Accept': 'text/plain' },
-          signal: AbortSignal.timeout(25000)
-        });
-        if (!res.ok) return "";
-        return await res.text();
-      } catch {
-        return "";
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const res = await fetch(`https://r.jina.ai/${targetUrl}`, { headers: jinaHeaders(format), signal: AbortSignal.timeout(timeoutMs) });
+            if (res.status === 429 || res.status >= 500) { await sleep(2500 * (attempt + 1)); continue; }
+            if (!res.ok) return null;
+            return { text: await res.text(), status: res.status };
+          } catch {
+            if (attempt === 2) return null;
+            await sleep(1500);
+          }
+        }
+        return null;
+      } finally {
+        jinaActive--;
+        const w = jinaWaiters.shift();
+        if (w) w();
       }
+    }
+
+    async function fetchJinaMarkdown(targetUrl) {
+      const r = await jinaFetch(targetUrl, 'markdown', 30000);
+      return r ? r.text : "";
+    }
+
+    // Doğrudan istek ve proxy'ler başarısız olunca: Jina'nın tarayıcıda render ettiği HTML
+    async function fetchJinaHtml(targetUrl) {
+      const r = await jinaFetch(targetUrl, 'html', 40000);
+      if (!r || !/<(html|head|body|div|script|link)\b/i.test(r.text)) return null;
+      return { bytes: new TextEncoder().encode(r.text), status: r.status, type: 'text/html', via: 'jina-html' };
+    }
+
+    // Önce sitenin kendi HTML'i, olmazsa render edilmiş kopya
+    async function fetchPageHtml(pageUrl) {
+      const raw = await fetchBytes(pageUrl);
+      if (raw && !/^\s*$/.test(decodeText(raw.bytes.slice(0, 2000)))) return raw;
+      return await fetchJinaHtml(pageUrl);
+    }
+
+    // fbclid, utm_* gibi izleme parametrelerini temizler
+    function stripTracking(u) {
+      try {
+        const p = new URL(u);
+        const drop = /^(utm_[a-z]+|fbclid|gclid|gbraid|wbraid|dclid|msclkid|yclid|igshid|mc_cid|mc_eid|_ga|_gl|ref_src|si)$/i;
+        Array.from(p.searchParams.keys()).forEach(k => { if (drop.test(k)) p.searchParams.delete(k); });
+        p.hash = '';
+        return p.href;
+      } catch { return u; }
     }
 
     // Eşzamanlılık sınırı ile sıralı sonuç döndüren havuz
@@ -455,8 +523,10 @@
       const sitemapFiles = new Set([origin + '/sitemap.xml']);
 
       const robots = await fetchBytes(origin + '/robots.txt', 10000);
-      if (robots) {
-        decodeText(robots.bytes).split('\n').forEach(line => {
+      let robotsText = robots ? decodeText(robots.bytes) : "";
+      if (!robotsText) { const j = await jinaFetch(origin + '/robots.txt', 'text', 15000); robotsText = j ? j.text : ""; }
+      if (robotsText) {
+        robotsText.split('\n').forEach(line => {
           const m = line.match(/^\s*sitemap:\s*(\S+)/i);
           if (m) sitemapFiles.add(m[1]);
         });
@@ -464,9 +534,18 @@
 
       const readSitemap = async (smUrl, depth) => {
         const res = await fetchBytes(smUrl, 12000);
-        if (!res) return;
-        const xml = decodeText(res.bytes);
-        if (!/<(urlset|sitemapindex)/i.test(xml)) return;
+        const xml = res ? decodeText(res.bytes) : "";
+        if (!/<(urlset|sitemapindex)/i.test(xml)) {
+          // Doğrudan okunamadıysa Jina üzerinden metin olarak al ve adresleri ayıkla
+          const j = await jinaFetch(smUrl, 'text', 20000);
+          if (!j) return;
+          const urls = Array.from(new Set((j.text.match(/https?:\/\/[^\s<>"')\]]+/g) || []).map(x => x.replace(/&amp;/g, '&'))));
+          const children = urls.filter(x => /\.xml(\?|$)/i.test(x) && x !== smUrl);
+          urls.filter(x => { try { return new URL(x).origin === origin && !/\.xml(\?|$)/i.test(x); } catch { return false; } })
+            .forEach(l => { if (found.size < 500) found.add(l); });
+          if (depth < 1) for (const child of children.slice(0, 3)) await readSitemap(child, depth + 1);
+          return;
+        }
         const locs = Array.from(xml.matchAll(/<loc>\s*(?:<!\[CDATA\[)?\s*([^<\]\s]+)/gi)).map(m => m[1].replace(/&amp;/g, '&'));
         if (/<sitemapindex/i.test(xml)) {
           if (depth < 1) for (const child of locs.slice(0, 3)) await readSitemap(child, depth + 1);
@@ -598,7 +677,19 @@
     let archiveFiles = new Map();   // arşiv yolu -> Uint8Array
     let archiveManifest = [];       // { url, path, kind, bytes, ok, note }
 
-    function resetArchive() { archiveFiles = new Map(); archiveManifest = []; }
+    let endpointSet = new Set();
+    function resetArchive() { archiveFiles = new Map(); archiveManifest = []; endpointSet = new Set(); }
+
+    // HTML ve JS içinde geçen API / backend adreslerini toplar
+    function collectEndpoints(text) {
+      if (!text || endpointSet.size >= 300) return;
+      const res = [
+        /["'`]((?:https?|wss?):\/\/[a-zA-Z0-9.-]+\.[a-z]{2,}(?::\d+)?\/(?:api|graphql|v\d+|rest|rpc|trpc|ws)\b[^\s"'`<>\\]{0,120})["'`]/g,
+        /["'`](\/(?:api|graphql|trpc|rest|rpc)(?:\/[A-Za-z0-9_\-.{}:$]+){0,8})["'`]/g,
+        /["'`](https:\/\/[a-z0-9-]+\.(?:supabase\.co|firebaseio\.com|firebaseapp\.com|appspot\.com|amazonaws\.com|azurewebsites\.net|herokuapp\.com|vercel\.app|workers\.dev|netlify\.app)[^\s"'`<>\\]{0,100})["'`]/g
+      ];
+      for (const re of res) for (const m of text.matchAll(re)) { if (endpointSet.size < 300) endpointSet.add(m[1]); }
+    }
 
     function shortHash(s) {
       let h = 5381;
@@ -761,6 +852,7 @@
 
         if (item.kind === 'css' || item.kind === 'js') {
           const text = decodeText(res.bytes);
+          if (item.kind === 'js') collectEndpoints(text);
           const tail = text.slice(-400).match(/sourceMappingURL=([^\s*]+)/);
           if (tail && !tail[1].startsWith('data:')) {
             try {
@@ -972,7 +1064,8 @@ Her önemli teknoloji ve mimari iddiası için evidence listesine bir kayıt ekl
     /* ---------- Ana Çalıştırıcı ---------- */
     async function runSherlock() {
       hideError();
-      const url = normalizeUrl($('targetUrl').value);
+      const normalized = normalizeUrl($('targetUrl').value);
+      const url = normalized ? stripTracking(normalized) : null;
       const apiKey = lsGet('sherlock_gemini_key', '').trim();
       const model = lsGet('sherlock_gemini_model', DEFAULT_MODEL).trim() || DEFAULT_MODEL;
       const mode = $('scanMode').value;
@@ -1000,7 +1093,7 @@ Her önemli teknoloji ve mimari iddiası için evidence listesine bir kayıt ekl
         // 1. Ana sayfa + sitemap
         statusText.textContent = `[1/5] Ana sayfa, robots.txt ve sitemap okunuyor: ${url}`;
         const [mainRes, mainMd, sitemapUrls] = await Promise.all([
-          fetchBytes(url),
+          fetchPageHtml(url),
           fetchJinaMarkdown(url),
           mode === 'deep' ? fetchSitemapUrls(url).catch(() => []) : Promise.resolve([])
         ]);
@@ -1010,31 +1103,50 @@ Her önemli teknoloji ve mimari iddiası için evidence listesine bir kayıt ekl
           throw new Error("Hedef siteye erişilemedi. Site bot koruması (Cloudflare vb.) uyguluyor olabilir ya da proxy'ler yanıt vermiyor. ⚙️ Ayarlar'dan kendi proxy adresini tanımlamayı dene.");
         }
 
-        // 2. Sayfa keşfi
-        const discovery = mode === 'deep'
-          ? discoverSubpages(rawHtml, mainMd, sitemapUrls, url, maxPages)
-          : { pages: [url.replace(/\/$/, '')], totalFound: 1 };
-        const pagesToCrawl = discovery.pages;
-
-        // 3. Tüm sayfaların ham HTML'i + render edilmiş metni
-        let pagesDone = 0;
-        statusText.textContent = `[2/5] ${discovery.totalFound} sayfa bulundu, ${pagesToCrawl.length} tanesi çekiliyor...`;
-        const pages = (await pool(pagesToCrawl, 4, async (pageUrl, idx) => {
+        // 2-3. Sayfa keşfi ve çekimi: her turda yeni sayfalardan link toplanır (çok seviyeli)
+        const fetchPage = async (pageUrl, preRes, preMd) => {
           const [h, md] = await Promise.all([
-            idx === 0 ? mainRes : fetchBytes(pageUrl),
-            idx === 0 && mainMd ? mainMd : fetchJinaMarkdown(pageUrl)
+            preRes !== undefined ? preRes : fetchPageHtml(pageUrl),
+            preMd ? preMd : fetchJinaMarkdown(pageUrl)
           ]);
-          pagesDone++;
-          statusText.textContent = `[2/5] Sayfalar çekiliyor: ${pagesDone}/${pagesToCrawl.length}`;
-          return { url: pageUrl, html: h ? decodeText(h.bytes) : "", bytes: h ? h.bytes : null, status: h ? h.status : 0, md: md || "" };
-        })).filter(Boolean);
+          return { url: pageUrl, html: h ? decodeText(h.bytes) : "", bytes: h ? h.bytes : null, status: h ? h.status : 0, via: h ? h.via : 'none', md: md || "" };
+        };
+
+        const mainKey = url.replace(/\/$/, '');
+        const pages = [await fetchPage(mainKey, mainRes, mainMd)];
+        const crawled = new Set([mainKey]);
+        let totalFound = 1;
+
+        for (let round = 0; mode === 'deep' && pages.length < maxPages && round < 4; round++) {
+          const htmlAll = pages.map(p => p.html).join("\n");
+          const mdAll = pages.map(p => p.md).join("\n");
+          const disc = discoverSubpages(htmlAll, mdAll, sitemapUrls, url, maxPages + crawled.size + 50);
+          totalFound = Math.max(totalFound, disc.totalFound);
+          const next = disc.pages.filter(u => !crawled.has(u)).slice(0, maxPages - pages.length);
+          if (!next.length) break;
+          next.forEach(u => crawled.add(u));
+          let done = 0;
+          statusText.textContent = `[2/5] ${totalFound} sayfa bulundu, ${pages.length + next.length}/${maxPages} çekiliyor (tur ${round + 1})...`;
+          const batch = await pool(next, 3, async u => {
+            const r = await fetchPage(u);
+            done++;
+            statusText.textContent = `[2/5] Sayfalar çekiliyor: ${pages.length + done}/${pages.length + next.length} (tur ${round + 1})`;
+            return r;
+          });
+          batch.filter(Boolean).forEach(p => pages.push(p));
+        }
+
+        const pagesToCrawl = pages.map(p => p.url);
+        const discovery = { pages: pagesToCrawl, totalFound };
+        const renderedOnly = pages.filter(p => p.via === 'jina-html').length;
+        const noHtml = pages.filter(p => !p.html).length;
 
         const pageSummaries = pages.map(p => {
-          const entry = { url: p.url, title: pageTitle(p.html), http_status: p.status, html_bytes: p.bytes ? p.bytes.length : 0, markdown_chars: p.md.length };
+          const entry = { url: p.url, title: pageTitle(p.html), source: p.via === 'jina-html' ? 'render (Jina)' : (p.html ? 'özgün' : 'yok'), http_status: p.status, html_bytes: p.bytes ? p.bytes.length : 0, markdown_chars: p.md.length };
           if (p.bytes) {
             entry.html_path = urlToArchivePath(p.url, 'pages');
             archiveFiles.set(entry.html_path, p.bytes);
-            archiveManifest.push({ url: p.url, path: entry.html_path, kind: 'page', bytes: p.bytes.length, ok: true });
+            archiveManifest.push({ url: p.url, path: entry.html_path, kind: 'page', bytes: p.bytes.length, ok: true, via: p.via });
           } else {
             archiveManifest.push({ url: p.url, kind: 'page', ok: false, note: 'ham HTML alınamadı' });
           }
@@ -1081,12 +1193,13 @@ Her önemli teknoloji ve mimari iddiası için evidence listesine bir kayıt ekl
         statusText.textContent = `[5/5] Rapor hazırlanıyor...`;
         const okFiles = archiveManifest.filter(x => x.ok).length;
         const fullPayload = {
-          tool: "THESHERLOCK V6.6",
+          tool: "THESHERLOCK V7.0",
           target_url: url,
           generated_at: new Date().toISOString(),
           http_status: mainRes ? mainRes.status : 0,
+          html_source: mainRes ? mainRes.via : 'none',
           crawled_pages: pagesToCrawl,
-          pages_found_total: discovery.totalFound,
+          pages_found_total: totalFound,
           pages: pageSummaries,
           report,
           detected_tech: techHints,
@@ -1106,6 +1219,11 @@ Her önemli teknoloji ve mimari iddiası için evidence listesine bir kayıt ekl
 
         lastFullResponse = fullPayload;
         renderResults(fullPayload, url);
+        if (renderedOnly || noHtml) {
+          showError(`⚠️ ${renderedOnly} sayfanın özgün HTML'ine ulaşılamadı; bu sayfalar Jina'nın render ettiği kopyadan alındı.` +
+            (noHtml ? ` ${noHtml} sayfada HTML hiç alınamadı, yalnızca metin var.` : '') +
+            `\nÖzgün dosyalar için: kendi sitende CORS'u aç ya da ⚙️ Ayarlar'a kendi proxy önekini yaz.`);
+        }
         addHistory(url);
 
         const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
@@ -1123,7 +1241,7 @@ Her önemli teknoloji ve mimari iddiası için evidence listesine bir kayıt ekl
       }
     }
 
-    /* ---------- Yardımcılar (V6.6) ---------- */
+    /* ---------- Yardımcılar ---------- */
     function pageTitle(html) {
       const m = (html || "").match(/<title[^>]*>([\s\S]*?)<\/title>/i);
       return m ? m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim().slice(0, 160) : "";
@@ -1342,7 +1460,9 @@ Her önemli teknoloji ve mimari iddiası için evidence listesine bir kayıt ekl
       if (parsed) obs.push(`${parsed} sayfada toplam ${inlineScripts} satır içi <script> var${pagesWithMetaCsp ? `; ${pagesWithMetaCsp} sayfada meta CSP etiketi bulundu.` : '; meta CSP etiketi bulunmadı.'}`);
       obs.push("HTTP yanıt başlıkları (CSP, HSTS, X-Frame-Options) tarayıcıdan okunamadığı için değerlendirilmedi.");
 
+      pages.forEach(p => collectEndpoints(p.html));
       return {
+        endpoints: Array.from(endpointSet).sort(),
         third_party_hosts: Array.from(hosts).sort((a, b) => b[1] - a[1]).map(([host, count]) => ({ host, count })),
         observations: obs
       };
@@ -1385,6 +1505,38 @@ Her önemli teknoloji ve mimari iddiası için evidence listesine bir kayıt ekl
 <h2>Taranan sayfalar (${pages.length})</h2><table>${pages.map(p => `<tr><th>${esc(p.title || '—')}</th><td>${esc(p.url)}${p.http_status ? ` <span class="tag">HTTP ${esc(p.http_status)}</span>` : ''}</td></tr>`).join('')}</table>
 <h2>Arşiv</h2><table>${row('Dosya sayısı', a.files)}${row('Toplam boyut', a.bytes ? fmtBytes(a.bytes) : '')}${row('Çevrimdışı sayfa', a.offline_pages)}${row('İndirilemeyen', a.failed)}</table>
 </body></html>`;
+    }
+
+    function buildBlueprint(d) {
+      const r = d.report || {}, ts = r.tech_stack || {}, la = d.local_analysis || {}, a = d.assets || d.extracted_assets || {};
+      const ex = d.extracted_assets || {};
+      const L = [];
+      const list = (title, arr) => { const x = toArr(arr); L.push(`### ${title} (${x.length})`); x.forEach(v => L.push(`- ${typeof v === 'object' ? JSON.stringify(v) : v}`)); L.push(''); };
+      L.push(`# ${d.target_url} — site planı`, '');
+      L.push(`- Araç: ${d.tool || 'THESHERLOCK'}`, `- Tarih: ${d.generated_at}`, `- Taranan sayfa: ${toArr(d.pages).length} (bulunan ${d.pages_found_total || '?'})`, '');
+      L.push('## Özet', '', r.executive_summary || '—', '');
+      if (r.architecture_assessment) L.push('## Mimari', '', r.architecture_assessment, '');
+      L.push('## Teknoloji', '');
+      list('Kaynak koddan tespit', d.detected_tech);
+      list('Framework', ts.frameworks);
+      list('Üçüncü taraf alan adları', toArr(la.third_party_hosts).map(h => `${h.host} (${h.count})`));
+      list('API / endpoint izleri', la.endpoints);
+      L.push('## Sayfa haritası', '');
+      toArr(d.pages).forEach(p => L.push(`- ${p.title ? p.title + ' — ' : ''}${p.url}${p.source ? ` [${p.source}]` : ''}`));
+      L.push('', '## Dosyalar', '');
+      list('JavaScript', ex.js);
+      list('CSS', ex.css);
+      list('Font', ex.fonts);
+      list('Görsel', ex.images);
+      list('Source map', toArr(ex.source_maps?.declared));
+      if (toArr(la.observations).length) { L.push('## Gözlemler', ''); toArr(la.observations).forEach(o => L.push(`- ${o}`)); L.push(''); }
+      L.push('## Sayfa içerikleri', '', d.merged_markdown || '—');
+      return L.join('\n');
+    }
+
+    function downloadBlueprint() {
+      if (!lastFullResponse) return toast("Rapor yok");
+      saveBlob('\uFEFF' + buildBlueprint(lastFullResponse), 'text/markdown;charset=utf-8', `thesherlock_plan_${hostSlug()}.md`);
     }
 
     function downloadReportHtml() {
@@ -1436,11 +1588,12 @@ Her önemli teknoloji ve mimari iddiası için evidence listesine bir kayıt ekl
       files.push({ name: 'manifest.json', data: enc.encode(JSON.stringify(lastFullResponse.archive.manifest, null, 2)) });
       files.push({ name: 'report.json', data: enc.encode(JSON.stringify({ ...lastFullResponse, raw_html: undefined, merged_markdown: undefined }, null, 2)) });
       files.push({ name: 'report.html', data: enc.encode(buildReportHtml(lastFullResponse)) });
+      files.push({ name: 'BLUEPRINT.md', data: enc.encode(buildBlueprint(lastFullResponse)) });
       if (lastFullResponse.merged_markdown) files.push({ name: 'all-pages.md', data: enc.encode(lastFullResponse.merged_markdown) });
       files.push({ name: 'README.txt', data: enc.encode(
         `THESHERLOCK arşivi\nHedef: ${lastFullResponse.target_url}\nTarih: ${lastFullResponse.generated_at}\n\n` +
         `offline/    çevrimdışı gezilebilir kopya; offline/index.html dosyasından başla\npages/      her sayfanın sunucudan gelen ham HTML'i (dokunulmamış)\nmarkdown/   her sayfanın render edilmiş metni\nassets/     JS, CSS, font, görsel ve source map dosyaları (alan adına göre)\n` +
-        `manifest.json  özgün URL -> arşiv yolu eşlemesi ve indirilemeyenler\nreport.json    analiz raporu ve varlık listesi\nreport.html    okunabilir rapor\n\n` +
+        `manifest.json  özgün URL -> arşiv yolu eşlemesi ve indirilemeyenler\nreport.json    analiz raporu ve varlık listesi\nreport.html    okunabilir rapor\nBLUEPRINT.md   tek dosyalık site planı\n\n` +
         `pages/ ve assets/ altındaki dosyalar özgün halleriyle saklanır. offline/ altındaki kopyalarda bağlantılar yerel dosyalara çevrilmiştir;\n` +
         `indirilemeyen başvurular özgün adreslerinde bırakılır. Modül script'leri file:// altında çalışmayabilir; en iyi sonuç için\n` +
         `arşiv klasöründe yerel bir sunucu aç (ör. python -m http.server) ve /offline/ adresine git.\n`) });
@@ -1506,6 +1659,7 @@ Her önemli teknoloji ve mimari iddiası için evidence listesine bir kayıt ekl
           </div>
           <div class="shrink-0 text-right">
             <span class="px-2 py-0.5 rounded border ${stCls}">${meta.url ? (st ? 'HTTP ' + st : 'HTML yok') : '—'}</span>
+            ${meta.source === 'render (Jina)' ? `<div class="text-amber-300 mt-1">render kopya</div>` : ''}
             ${meta.html_bytes ? `<div class="text-slate-500 mt-1">${fmtBytes(meta.html_bytes)}</div>` : ''}
           </div>
         </div>`;
@@ -1524,7 +1678,8 @@ Her önemli teknoloji ve mimari iddiası için evidence listesine bir kayıt ekl
         ["Server & Altyapı", ts.server],
         ["Analytics & SDK", ts.analytics_marketing],
         ["Kaynak Koddan Tespit", data.detected_tech],
-        ["Üçüncü Taraf Alan Adları", toArr(data.local_analysis?.third_party_hosts).map(h => `${h.host} (${h.count})`)]
+        ["Üçüncü Taraf Alan Adları", toArr(data.local_analysis?.third_party_hosts).map(h => `${h.host} (${h.count})`)],
+        ["API / Endpoint İzleri", data.local_analysis?.endpoints]
       ];
       $('techStackList').innerHTML = rows.map(([k, v]) => `<div class="bg-slate-900/70 p-2.5 rounded border border-slate-800/80">
         <div class="text-slate-500 font-mono text-[10px] uppercase mb-1">${esc(k)}</div>${chips(v)}</div>`).join('');
@@ -1566,6 +1721,16 @@ Her önemli teknoloji ve mimari iddiası için evidence listesine bir kayıt ekl
       applyAssetFilter();
 
       renderArchive(data);
+      const a = data.archive || {}, la = data.local_analysis || {};
+      const techCount = new Set([...toArr(data.detected_tech), ...toArr(report.tech_stack?.frameworks)]).size;
+      const tileS = (label, value, cls) => `<div class="glass rounded-xl px-4 py-3"><div class="text-[10px] font-mono uppercase text-slate-500">${esc(label)}</div><div class="text-xl font-bold font-mono ${cls}">${esc(value)}</div></div>`;
+      $('statsStrip').innerHTML =
+        tileS("Sayfa", pages.length, "text-emerald-400") +
+        tileS("Dosya", a.files ?? 0, "text-sky-400") +
+        tileS("Boyut", a.bytes ? fmtBytes(a.bytes) : "—", "text-white") +
+        tileS("Teknoloji", techCount, "text-purple-300") +
+        tileS("Endpoint", toArr(la.endpoints).length, "text-amber-300") +
+        tileS("Hata", a.failed ?? 0, a.failed ? "text-rose-300" : "text-slate-300");
 
       // Kod & Markdown Kutusu
       currentRawHtml = data.raw_html || "";
@@ -1806,6 +1971,7 @@ Her önemli teknoloji ve mimari iddiası için evidence listesine bir kayıt ekl
     $('followChunksInput').checked = lsGet('sherlock_follow_chunks', '1') === '1';
     $('maxAssetsInput').value = lsGet('sherlock_max_assets', '300');
     $('proxyInput').value = lsGet('sherlock_proxy', '');
+    $('jinaKeyInput').value = lsGet('sherlock_jina_key', '');
     updateApiButtonState();
     $('targetUrl').addEventListener('keydown', e => { if (e.key === 'Enter') runSherlock(); });
     $('settingsModal').addEventListener('click', e => { if (e.target.id === 'settingsModal') toggleSettingsModal(); });
